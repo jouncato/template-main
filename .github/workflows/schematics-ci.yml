@@ -1,0 +1,326 @@
+name: Schematics CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'schematics-package/**'
+      - '.github/workflows/schematics-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'schematics-package/**'
+  release:
+    types: [created]
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  lint:
+    name: Lint Schematics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: schematics-package/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./schematics-package
+        run: npm run lint
+
+      - name: Check code formatting
+        working-directory: ./schematics-package
+        run: npm run format -- --check
+
+  test:
+    name: Test Schematics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: schematics-package/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: ./schematics-package
+        run: npm test -- --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./schematics-package/coverage/lcov.info
+          flags: schematics
+          name: schematics-coverage
+
+  build:
+    name: Build Schematics
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: schematics-package/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Build package
+        working-directory: ./schematics-package
+        run: npm run build
+
+      - name: Check build artifacts
+        working-directory: ./schematics-package
+        run: |
+          ls -la dist/
+          test -f dist/index.js || (echo "index.js not found" && exit 1)
+          test -f dist/hexagonal-module/index.js || (echo "hexagonal-module/index.js not found" && exit 1)
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: schematics-dist
+          path: schematics-package/dist/
+          retention-days: 7
+
+  validate-generation:
+    name: Validate Module Generation
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      matrix:
+        test-case:
+          - name: oracle-kafka
+            args: '--database=oracle --kafka=both'
+          - name: mssql-producer
+            args: '--database=mssql --kafka=producer --crud-mode=stored-proc'
+          - name: mongodb-orm
+            args: '--database=mongodb --crud-mode=orm'
+          - name: none-minimal
+            args: '--database=none --kafka=none'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: schematics-dist
+          path: schematics-package/dist/
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Link schematics package
+        working-directory: ./schematics-package
+        run: npm link
+
+      - name: Create test NestJS project
+        run: |
+          npx @nestjs/cli new test-project --skip-git --package-manager npm
+          cd test-project
+          npm install
+
+      - name: Generate test module
+        working-directory: ./test-project
+        run: |
+          npx nest g @template/schematics:hexagonal-module test-${{ matrix.test-case.name }} \
+            ${{ matrix.test-case.args }} \
+            --path=src/app \
+            --dry-run
+
+      - name: Generate module (actual)
+        working-directory: ./test-project
+        run: |
+          npx nest g @template/schematics:hexagonal-module test-${{ matrix.test-case.name }} \
+            ${{ matrix.test-case.args }} \
+            --path=src/app
+
+      - name: Verify generated files
+        working-directory: ./test-project
+        run: |
+          MODULE_PATH="src/app/test-${{ matrix.test-case.name }}"
+          echo "Checking generated module at $MODULE_PATH"
+
+          # Core files
+          test -f "$MODULE_PATH/test-${{ matrix.test-case.name }}.module.ts" || (echo "Module file not found" && exit 1)
+          test -f "$MODULE_PATH/README.module.md" || (echo "README not found" && exit 1)
+
+          # Domain layer
+          test -d "$MODULE_PATH/domain/entities" || (echo "Entities directory not found" && exit 1)
+          test -d "$MODULE_PATH/domain/ports" || (echo "Ports directory not found" && exit 1)
+
+          # Application layer
+          test -d "$MODULE_PATH/application/usecases" || (echo "Usecases directory not found" && exit 1)
+          test -d "$MODULE_PATH/application/dtos" || (echo "DTOs directory not found" && exit 1)
+
+          # Adapters
+          test -d "$MODULE_PATH/adapters/inbound" || (echo "Inbound adapters not found" && exit 1)
+          test -d "$MODULE_PATH/adapters/outbound" || (echo "Outbound adapters not found" && exit 1)
+
+          echo "✅ All required files generated successfully"
+
+      - name: Compile TypeScript
+        working-directory: ./test-project
+        run: npm run build
+
+      - name: Run tests
+        working-directory: ./test-project
+        run: npm test -- --passWithNoTests
+
+  integration-test:
+    name: Integration Tests with Testcontainers
+    runs-on: ubuntu-latest
+    needs: [build]
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: schematics-dist
+          path: schematics-package/dist/
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Link schematics
+        working-directory: ./schematics-package
+        run: npm link
+
+      - name: Create test project with Oracle module
+        run: |
+          npx @nestjs/cli new integration-test --skip-git --package-manager npm
+          cd integration-test
+          npm install
+          npm install --save-dev testcontainers @types/oracledb oracledb mssql kafkajs
+
+      - name: Generate Oracle module
+        working-directory: ./integration-test
+        run: |
+          npx nest g @template/schematics:hexagonal-module payments \
+            --database=oracle \
+            --kafka=producer \
+            --path=src/app
+
+      - name: Run integration tests with testcontainers
+        working-directory: ./integration-test
+        run: npm test -- --testMatch="**/tests/integration/**/*.spec.ts"
+        timeout-minutes: 15
+
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, validate-generation]
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: ./schematics-package
+        run: npm ci
+
+      - name: Build package
+        working-directory: ./schematics-package
+        run: npm run build
+
+      - name: Publish to NPM
+        working-directory: ./schematics-package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            schematics-package/dist/**/*
+          body: |
+            ## 🚀 Nueva versión de @template/schematics
+
+            ### Instalación
+            \`\`\`bash
+            npm install -g @template/schematics@${{ github.event.release.tag_name }}
+            \`\`\`
+
+            ### Uso
+            \`\`\`bash
+            nest g @template/schematics:hexagonal-module my-module --database=oracle --kafka=both
+            \`\`\`
+
+            Ver [README.md](https://github.com/${{ github.repository }}/blob/main/schematics-package/README.md) para documentación completa.
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './schematics-package'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run npm audit
+        working-directory: ./schematics-package
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
