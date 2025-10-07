@@ -3,7 +3,17 @@
     "allow": [
       "Bash(npm test:*)",
       "Bash(tree:*)",
-      "Bash(dir \"C:\\Proj-Dev\\template-main\\schematics-package\\src\\hexagonal-module\\files\\adapters\\outbound\\db\" /s /b)"
+      "Bash(dir \"C:\\Proj-Dev\\template-main\\schematics-package\\src\\hexagonal-module\\files\\adapters\\outbound\\db\" /s /b)",
+      "Bash(cmd /c:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx @nestjs/cli:*)",
+      "Bash(npx @angular-devkit/schematics-cli:*)",
+      "Bash(npx schematics:*)",
+      "Bash(npx nest g:*)",
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(powershell:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

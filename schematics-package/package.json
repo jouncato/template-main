@@ -16,14 +16,15 @@
     "mongodb",
     "kafka"
   ],
-  "schematics": "./collection.json",
+  "schematics": "./dist/collection.json",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.json && npm run copy:assets",
     "build:watch": "tsc -p tsconfig.json --watch",
     "clean": "rimraf dist",
+    "copy:assets": "node scripts/copy-assets.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

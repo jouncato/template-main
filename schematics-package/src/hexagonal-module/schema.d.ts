@@ -21,7 +21,9 @@ export interface HexagonalModuleOptions {
 
   /**
    * CRUD implementation mode for relational databases
+   * Supports both kebab-case (crud-mode) and camelCase (crudMode)
    */
+  'crud-mode'?: 'stored-proc' | 'orm' | 'mixed';
   crudMode?: 'stored-proc' | 'orm' | 'mixed';
 
   /**
@@ -31,12 +33,16 @@ export interface HexagonalModuleOptions {
 
   /**
    * Run schematic without making changes
+   * Supports both kebab-case (dry-run) and camelCase (dryRun)
    */
+  'dry-run'?: boolean;
   dryRun?: boolean;
 
   /**
    * Generate database migration scripts
+   * Supports both kebab-case (apply-migrations) and camelCase (applyMigrations)
    */
+  'apply-migrations'?: boolean;
   applyMigrations?: boolean;
 
   /**
@@ -46,12 +52,16 @@ export interface HexagonalModuleOptions {
 
   /**
    * Schema registry for Kafka
+   * Supports both kebab-case (schema-registry) and camelCase (schemaRegistry)
    */
+  'schema-registry'?: 'none' | 'confluent';
   schemaRegistry?: 'none' | 'confluent';
 
   /**
    * Skip generating test files
+   * Supports both kebab-case (skip-tests) and camelCase (skipTests)
    */
+  'skip-tests'?: boolean;
   skipTests?: boolean;
 
   /**

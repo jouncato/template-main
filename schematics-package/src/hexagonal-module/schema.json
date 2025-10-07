@@ -52,27 +52,29 @@
       "format": "path",
       "default": "src/app"
     },
-    "crudMode": {
+    "crud-mode": {
       "type": "string",
       "description": "CRUD implementation mode for relational databases",
       "enum": ["stored-proc", "orm", "mixed"],
-      "default": "stored-proc"
+      "default": "stored-proc",
+      "alias": "crudMode"
     },
     "ops": {
       "type": "string",
       "description": "Comma-separated list of operations to implement (select,insert,update,delete)",
       "default": "select,insert,update,delete"
     },
-    "dryRun": {
+    "dry-run": {
       "type": "boolean",
       "description": "Run schematic without making changes",
       "default": false,
-      "alias": "d"
+      "alias": ["d", "dryRun"]
     },
-    "applyMigrations": {
+    "apply-migrations": {
       "type": "boolean",
       "description": "Generate database migration scripts",
-      "default": false
+      "default": false,
+      "alias": "applyMigrations"
     },
     "auth": {
       "type": "string",
@@ -80,16 +82,18 @@
       "enum": ["none", "jwt", "oauth2"],
       "default": "none"
     },
-    "schemaRegistry": {
+    "schema-registry": {
       "type": "string",
       "description": "Schema registry for Kafka",
       "enum": ["none", "confluent"],
-      "default": "none"
+      "default": "none",
+      "alias": "schemaRegistry"
     },
-    "skipTests": {
+    "skip-tests": {
       "type": "boolean",
       "description": "Skip generating test files",
-      "default": false
+      "default": false,
+      "alias": "skipTests"
     },
     "flat": {
       "type": "boolean",

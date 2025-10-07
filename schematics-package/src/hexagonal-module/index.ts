@@ -13,7 +13,7 @@ import {
   SchematicsException,
 } from '@angular-devkit/schematics';
 import { normalize, strings } from '@angular-devkit/core';
-import * as chalk from 'chalk';
+import chalk from 'chalk';
 import { HexagonalModuleOptions } from './schema';
 
 interface NormalizedOptions extends HexagonalModuleOptions {
@@ -129,30 +129,40 @@ function validateSchemaRegistry(schemaRegistry: string, kafka: string): void {
 // ==================== NORMALIZATION ====================
 
 function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
+  // Normalize kebab-case to camelCase for internal use
+  const normalizedOptions = {
+    ...options,
+    crudMode: options.crudMode || options['crud-mode'] || 'stored-proc',
+    dryRun: options.dryRun ?? options['dry-run'] ?? false,
+    applyMigrations: options.applyMigrations ?? options['apply-migrations'] ?? false,
+    schemaRegistry: options.schemaRegistry || options['schema-registry'] || 'none',
+    skipTests: options.skipTests ?? options['skip-tests'] ?? false,
+  };
+
   // Validate inputs
-  validateModuleName(options.name);
-  validateDatabaseOption(options.database);
-  validateKafkaOption(options.kafka);
+  validateModuleName(normalizedOptions.name);
+  validateDatabaseOption(normalizedOptions.database);
+  validateKafkaOption(normalizedOptions.kafka);
 
-  const crudMode = options.crudMode || 'stored-proc';
-  validateCrudMode(crudMode, options.database);
+  const crudMode = normalizedOptions.crudMode;
+  validateCrudMode(crudMode, normalizedOptions.database);
 
-  const ops = options.ops || 'select,insert,update,delete';
+  const ops = normalizedOptions.ops || 'select,insert,update,delete';
   const operations = validateOperations(ops);
 
-  const schemaRegistry = options.schemaRegistry || 'none';
-  validateSchemaRegistry(schemaRegistry, options.kafka);
+  const schemaRegistry = normalizedOptions.schemaRegistry;
+  validateSchemaRegistry(schemaRegistry, normalizedOptions.kafka);
 
   // Normalize paths and names
-  const moduleName = strings.dasherize(options.name);
-  const moduleClassName = strings.classify(options.name);
-  const basePath = options.path || 'src/app';
-  const modulePath = options.flat
+  const moduleName = strings.dasherize(normalizedOptions.name);
+  const moduleClassName = strings.classify(normalizedOptions.name);
+  const basePath = normalizedOptions.path || 'src/app';
+  const modulePath = normalizedOptions.flat
     ? normalize(basePath)
     : normalize(`${basePath}/${moduleName}`);
 
   return {
-    ...options,
+    ...normalizedOptions,
     moduleName,
     moduleClassName,
     modulePath,
@@ -214,16 +224,24 @@ function logGenerationPlan(options: NormalizedOptions, context: SchematicContext
 
 // ==================== FILE GENERATION RULES ====================
 
+/**
+ * Helper function to create template context with all necessary variables for file name and content processing
+ */
+function getTemplateContext(options: NormalizedOptions) {
+  return {
+    ...options,
+    ...strings,
+    name: options.moduleName,  // For __name__ placeholder in file names
+    classify: strings.classify,
+    dasherize: strings.dasherize,
+    camelize: strings.camelize,
+  };
+}
+
 function generateCoreFiles(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/core'), [
-      applyTemplates({
-        ...options,
-        ...strings,
-        classify: strings.classify,
-        dasherize: strings.dasherize,
-        camelize: strings.camelize,
-      }),
+      applyTemplates(getTemplateContext(options)),
       move(options.modulePath),
     ])
   );
@@ -232,10 +250,7 @@ function generateCoreFiles(options: NormalizedOptions): Rule {
 function generateDomainLayer(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/domain'), [
-      applyTemplates({
-        ...options,
-        ...strings,
-      }),
+      applyTemplates(getTemplateContext(options)),
       move(`${options.modulePath}/domain`),
     ])
   );
@@ -244,10 +259,7 @@ function generateDomainLayer(options: NormalizedOptions): Rule {
 function generateApplicationLayer(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/application'), [
-      applyTemplates({
-        ...options,
-        ...strings,
-      }),
+      applyTemplates(getTemplateContext(options)),
       move(`${options.modulePath}/application`),
     ])
   );
@@ -258,10 +270,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
     // Inbound adapters (always generate)
     mergeWith(
       apply(url('./files/adapters/inbound'), [
-        applyTemplates({
-          ...options,
-          ...strings,
-        }),
+        applyTemplates(getTemplateContext(options)),
         move(`${options.modulePath}/adapters/inbound`),
       ])
     ),
@@ -270,10 +279,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
     options.database !== 'none'
       ? mergeWith(
           apply(url(`./files/adapters/outbound/db/${options.database}`), [
-            applyTemplates({
-              ...options,
-              ...strings,
-            }),
+            applyTemplates(getTemplateContext(options)),
             move(`${options.modulePath}/adapters/outbound/db`),
           ])
         )
@@ -283,10 +289,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
     options.kafka !== 'none'
       ? mergeWith(
           apply(url('./files/adapters/outbound/kafka'), [
-            applyTemplates({
-              ...options,
-              ...strings,
-            }),
+            applyTemplates(getTemplateContext(options)),
             filter(path => {
               if (options.kafka === 'producer' && path.includes('consumer')) return false;
               if (options.kafka === 'consumer' && path.includes('producer')) return false;
@@ -301,10 +304,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
     options.auth && options.auth !== 'none'
       ? mergeWith(
           apply(url(`./files/adapters/auth/${options.auth}`), [
-            applyTemplates({
-              ...options,
-              ...strings,
-            }),
+            applyTemplates(getTemplateContext(options)),
             move(`${options.modulePath}/adapters/auth`),
           ])
         )
@@ -318,10 +318,7 @@ function generateInfrastructure(options: NormalizedOptions): Rule {
     options.database === 'oracle' || options.database === 'mssql'
       ? mergeWith(
           apply(url(`./files/infra/db/${options.database}`), [
-            applyTemplates({
-              ...options,
-              ...strings,
-            }),
+            applyTemplates(getTemplateContext(options)),
             move(`${options.modulePath}/infra/db`),
           ])
         )
@@ -331,10 +328,7 @@ function generateInfrastructure(options: NormalizedOptions): Rule {
     options.kafka !== 'none'
       ? mergeWith(
           apply(url('./files/infra/kafka'), [
-            applyTemplates({
-              ...options,
-              ...strings,
-            }),
+            applyTemplates(getTemplateContext(options)),
             move(`${options.modulePath}/infra/kafka`),
           ])
         )
@@ -351,10 +345,7 @@ function generateTests(options: NormalizedOptions): Rule {
     // Unit tests
     mergeWith(
       apply(url('./files/tests/unit'), [
-        applyTemplates({
-          ...options,
-          ...strings,
-        }),
+        applyTemplates(getTemplateContext(options)),
         move(`${options.modulePath}/tests/unit`),
       ])
     ),
@@ -362,10 +353,7 @@ function generateTests(options: NormalizedOptions): Rule {
     // Integration tests
     mergeWith(
       apply(url('./files/tests/integration'), [
-        applyTemplates({
-          ...options,
-          ...strings,
-        }),
+        applyTemplates(getTemplateContext(options)),
         filter(path => {
           if (options.database === 'none' && path.includes('repository')) return false;
           if (options.kafka === 'none' && path.includes('kafka')) return false;
@@ -378,10 +366,7 @@ function generateTests(options: NormalizedOptions): Rule {
     // E2E tests
     mergeWith(
       apply(url('./files/tests/e2e'), [
-        applyTemplates({
-          ...options,
-          ...strings,
-        }),
+        applyTemplates(getTemplateContext(options)),
         move(`${options.modulePath}/tests/e2e`),
       ])
     ),
@@ -392,8 +377,7 @@ function generateDocumentation(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/docs'), [
       applyTemplates({
-        ...options,
-        ...strings,
+        ...getTemplateContext(options),
         timestamp: new Date().toISOString(),
       }),
       move(options.modulePath),
