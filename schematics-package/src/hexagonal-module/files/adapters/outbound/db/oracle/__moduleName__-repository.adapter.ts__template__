@@ -1,0 +1,563 @@
+import { Injectable } from '@nestjs/common';
+import * as oracledb from 'oracledb';
+
+import { OracleService } from '@share/infrastructure/oracle/oracle.service';
+import { Logger20Service } from '@share/domain/config/logger/logger20.service';
+
+import { <%= classify(moduleName) %>Entity } from '../../../../domain/entities/<%= dasherize(moduleName) %>.entity';
+import { I<%= classify(moduleName) %>Repository, PaginationOptions, PaginatedResult } from '../../../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';
+import { OracleStoredProcMapper } from './stored-proc-mapper.util';
+
+/**
+ * Oracle Repository Adapter for <%= classify(moduleName) %>
+ *
+ * This is an ADAPTER in hexagonal architecture - it implements the repository port
+ * using Oracle stored procedures and PL/SQL packages.
+ *
+ * Architecture Pattern:
+ * - Implements: I<%= classify(moduleName) %>Repository (outbound port defined in domain layer)
+ * - Uses: OracleService for database operations
+ * - Approach: Stored procedure-based data access (no ORM)
+ *
+ * Stored Procedure Naming Convention:
+ * - PRC_<%= constantCase(moduleName) %>_SELECT (with p_cursor OUT SYS_REFCURSOR for result sets)
+ * - PRC_<%= constantCase(moduleName) %>_INSERT (with p_result OUT NUMBER for status)
+ * - PRC_<%= constantCase(moduleName) %>_UPDATE (with p_affected_rows OUT NUMBER)
+ * - PRC_<%= constantCase(moduleName) %>_DELETE (with p_affected_rows OUT NUMBER)
+ *
+ * Oracle-Specific Features:
+ * - SYS_REFCURSOR: Used for returning result sets from procedures
+ * - Bind Variables: All parameters use Oracle bind variables for security and performance
+ * - OUT Parameters: Procedures return status codes via OUT parameters
+ * - Package Organization: All procedures organized in a PL/SQL package
+ *
+ * Benefits of Stored Procedures:
+ * - Performance: Compiled and cached by Oracle
+ * - Security: Parameterized queries prevent SQL injection
+ * - Encapsulation: Database logic centralized in database
+ * - Transaction Control: Native support for COMMIT/ROLLBACK
+ * - Maintainability: DBAs can optimize without changing application code
+ *
+ * Transaction Handling:
+ * - Each stored procedure manages its own transaction scope
+ * - Complex operations use SAVEPOINT/COMMIT/ROLLBACK
+ * - Error handling with EXCEPTION blocks in PL/SQL
+ *
+ * Cursor Management:
+ * - The OracleService automatically fetches all rows from SYS_REFCURSOR
+ * - Cursors are properly closed after fetching data
+ * - Memory-efficient batch fetching for large result sets
+ *
+ * @see OracleService for database connection management and cursor handling
+ * @see I<%= classify(moduleName) %>Repository for port interface definition
+ */
+@Injectable()
+export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classify(moduleName) %>Repository {
+  constructor(
+    private readonly oracleService: OracleService,
+    private readonly logger: Logger20Service,
+  ) {}
+
+  /**
+   * Find a <%= classify(moduleName) %> by ID
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_SELECT
+   *
+   * Oracle Specifics:
+   * - Uses SYS_REFCURSOR for result set
+   * - Bind variable: p_id (VARCHAR2)
+   * - OUT parameter: p_cursor (SYS_REFCURSOR)
+   *
+   * @param id - The unique identifier
+   * @returns Promise resolving to entity or null if not found
+   */
+  async findById(id: string): Promise<<%= classify(moduleName) %>Entity | null> {
+    try {
+      this.logger.log(`Finding <%= moduleName %> by id: ${id}`);
+
+      // Bind parameters for stored procedure
+      // p_id: IN parameter with the entity ID
+      // p_cursor: OUT parameter that will contain the result set
+      const binds: oracledb.BindParameters = {
+        p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: id },
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      };
+
+      // Execute stored procedure
+      // OracleService automatically fetches all rows from the cursor
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_SELECT',
+        binds,
+      );
+
+      // Extract cursor data from outBinds
+      // The cursor has been automatically fetched and closed by OracleService
+      const rows = result.outBinds?.p_cursor as any[];
+
+      // Check if any results were returned
+      if (!rows || rows.length === 0) {
+        this.logger.log(`<%= classify(moduleName) %> with id ${id} not found`);
+        return null;
+      }
+
+      // Map first database record to domain entity
+      const record = rows[0];
+      const entity = OracleStoredProcMapper.fromDbResult(record);
+
+      this.logger.log(`Found <%= moduleName %>: ${entity.id}`);
+      return entity;
+    } catch (error) {
+      this.logger.error(`Error finding <%= moduleName %> by id ${id}:`, error);
+      throw new Error(`Failed to find <%= moduleName %> by id: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Find all <%= classify(moduleName) %> entities
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_SELECT_ALL
+   *
+   * Oracle Specifics:
+   * - No IN parameters (fetches all records)
+   * - OUT parameter: p_cursor (SYS_REFCURSOR)
+   *
+   * @returns Promise resolving to array of entities
+   */
+  async findAll(): Promise<<%= classify(moduleName) %>Entity[]> {
+    try {
+      this.logger.log(`Finding all <%= moduleName %> entities`);
+
+      // Bind parameters: only OUT cursor, no IN parameters
+      const binds: oracledb.BindParameters = {
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      };
+
+      // Execute stored procedure
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_SELECT_ALL',
+        binds,
+      );
+
+      // Extract and map cursor data
+      const rows = result.outBinds?.p_cursor as any[];
+
+      if (!rows || rows.length === 0) {
+        this.logger.log(`No <%= moduleName %> entities found`);
+        return [];
+      }
+
+      // Map all records to domain entities
+      const entities = rows.map((record) => OracleStoredProcMapper.fromDbResult(record));
+
+      this.logger.log(`Found ${entities.length} <%= moduleName %> entities`);
+      return entities;
+    } catch (error) {
+      this.logger.error(`Error finding all <%= moduleName %> entities:`, error);
+      throw new Error(`Failed to find all <%= moduleName %> entities: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Find <%= classify(moduleName) %> entities by status
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_SELECT_BY_STATUS
+   *
+   * @param status - The status to filter by
+   * @returns Promise resolving to array of matching entities
+   */
+  async findByStatus(status: string): Promise<<%= classify(moduleName) %>Entity[]> {
+    try {
+      this.logger.log(`Finding <%= moduleName %> entities by status: ${status}`);
+
+      const binds: oracledb.BindParameters = {
+        p_status: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: status },
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_SELECT_BY_STATUS',
+        binds,
+      );
+
+      const rows = result.outBinds?.p_cursor as any[];
+
+      if (!rows || rows.length === 0) {
+        return [];
+      }
+
+      const entities = rows.map((record) => OracleStoredProcMapper.fromDbResult(record));
+      this.logger.log(`Found ${entities.length} <%= moduleName %> entities with status ${status}`);
+      return entities;
+    } catch (error) {
+      this.logger.error(`Error finding <%= moduleName %> by status:`, error);
+      throw new Error(`Failed to find <%= moduleName %> by status: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Find a <%= classify(moduleName) %> by name
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_SELECT_BY_NAME
+   *
+   * @param name - The name to search for
+   * @returns Promise resolving to entity or null if not found
+   */
+  async findByName(name: string): Promise<<%= classify(moduleName) %>Entity | null> {
+    try {
+      this.logger.log(`Finding <%= moduleName %> by name: ${name}`);
+
+      const binds: oracledb.BindParameters = {
+        p_name: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: name },
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_SELECT_BY_NAME',
+        binds,
+      );
+
+      const rows = result.outBinds?.p_cursor as any[];
+
+      if (!rows || rows.length === 0) {
+        return null;
+      }
+
+      const entity = OracleStoredProcMapper.fromDbResult(rows[0]);
+      return entity;
+    } catch (error) {
+      this.logger.error(`Error finding <%= moduleName %> by name:`, error);
+      throw new Error(`Failed to find <%= moduleName %> by name: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Save a new <%= classify(moduleName) %> entity
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_INSERT
+   *
+   * Oracle Specifics:
+   * - All entity properties as IN parameters
+   * - OUT parameter: p_result (NUMBER) for operation status
+   *   - 1 = Success
+   *   - -1 = Already exists (duplicate ID)
+   *   - 0 = Failed
+   *
+   * Transaction handling:
+   * - The stored procedure manages transaction scope with COMMIT/ROLLBACK
+   * - Uses EXCEPTION block for error handling
+   *
+   * @param entity - The entity to save
+   * @returns Promise resolving to the saved entity
+   * @throws Error if save operation fails
+   */
+  async save(entity: <%= classify(moduleName) %>Entity): Promise<<%= classify(moduleName) %>Entity> {
+    try {
+      this.logger.log(`Saving new <%= moduleName %>: ${entity.id}`);
+
+      // Map entity to stored procedure parameters
+      const insertParams = OracleStoredProcMapper.toInsertParams(entity);
+
+      // Add OUT parameter for result status
+      const binds: oracledb.BindParameters = {
+        ...insertParams,
+        p_result: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      // Execute stored procedure
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_INSERT',
+        binds,
+      );
+
+      // Check output parameter for success
+      // Convention: 1 = success, -1 = already exists, 0 = failure
+      const resultCode = result.outBinds?.p_result as number;
+
+      if (resultCode === 1) {
+        this.logger.log(`Successfully saved <%= moduleName %>: ${entity.id}`);
+        return entity;
+      } else if (resultCode === -1) {
+        throw new Error(`<%= classify(moduleName) %> with id ${entity.id} already exists`);
+      } else {
+        throw new Error(`Failed to save <%= moduleName %>, result code: ${resultCode}`);
+      }
+    } catch (error) {
+      this.logger.error(`Error saving <%= moduleName %>:`, error);
+
+      // Handle Oracle-specific errors
+      if ((error as any).errorNum === 1) {
+        throw new Error(`<%= classify(moduleName) %> with id ${entity.id} already exists (ORA-00001: unique constraint violated)`);
+      }
+
+      throw new Error(`Failed to save <%= moduleName %>: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Update an existing <%= classify(moduleName) %> entity
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_UPDATE
+   *
+   * Oracle Specifics:
+   * - Entity properties as IN parameters
+   * - OUT parameter: p_affected_rows (NUMBER)
+   *
+   * Transaction handling:
+   * - Managed by stored procedure with COMMIT/ROLLBACK
+   * - Returns affected rows count via output parameter
+   *
+   * @param entity - The entity to update
+   * @returns Promise resolving to the updated entity
+   * @throws Error if entity does not exist
+   */
+  async update(entity: <%= classify(moduleName) %>Entity): Promise<<%= classify(moduleName) %>Entity> {
+    try {
+      this.logger.log(`Updating <%= moduleName %>: ${entity.id}`);
+
+      // Map entity to update parameters
+      const updateParams = OracleStoredProcMapper.toUpdateParams(entity);
+
+      // Add OUT parameter for affected rows
+      const binds: oracledb.BindParameters = {
+        ...updateParams,
+        p_affected_rows: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      // Execute stored procedure
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_UPDATE',
+        binds,
+      );
+
+      // Check affected rows
+      const affectedRows = result.outBinds?.p_affected_rows as number;
+
+      if (affectedRows === 0) {
+        throw new Error(`<%= classify(moduleName) %> with id ${entity.id} not found`);
+      }
+
+      this.logger.log(`Successfully updated <%= moduleName %>: ${entity.id}`);
+      return entity;
+    } catch (error) {
+      this.logger.error(`Error updating <%= moduleName %>:`, error);
+      throw new Error(`Failed to update <%= moduleName %>: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Delete a <%= classify(moduleName) %> by ID
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_DELETE
+   *
+   * Oracle Specifics:
+   * - IN parameter: p_id (VARCHAR2)
+   * - OUT parameter: p_affected_rows (NUMBER)
+   *
+   * Transaction handling:
+   * - Managed by stored procedure
+   * - Can perform soft delete (set status='DELETED') or hard delete (DELETE FROM)
+   *
+   * @param id - The unique identifier of the entity to delete
+   * @returns Promise resolving to true if deleted, false if not found
+   */
+  async delete(id: string): Promise<boolean> {
+    try {
+      this.logger.log(`Deleting <%= moduleName %>: ${id}`);
+
+      const binds: oracledb.BindParameters = {
+        p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: id },
+        p_affected_rows: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_DELETE',
+        binds,
+      );
+
+      const affectedRows = result.outBinds?.p_affected_rows as number;
+      const deleted = affectedRows > 0;
+
+      if (deleted) {
+        this.logger.log(`Successfully deleted <%= moduleName %>: ${id}`);
+      } else {
+        this.logger.log(`<%= classify(moduleName) %> with id ${id} not found for deletion`);
+      }
+
+      return deleted;
+    } catch (error) {
+      this.logger.error(`Error deleting <%= moduleName %>:`, error);
+      throw new Error(`Failed to delete <%= moduleName %>: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Check if a <%= classify(moduleName) %> exists by ID
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_EXISTS
+   *
+   * @param id - The unique identifier to check
+   * @returns Promise resolving to true if exists, false otherwise
+   */
+  async exists(id: string): Promise<boolean> {
+    try {
+      const binds: oracledb.BindParameters = {
+        p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: id },
+        p_exists: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_EXISTS',
+        binds,
+      );
+
+      // Oracle returns NUMBER (0 or 1) for boolean
+      return (result.outBinds?.p_exists as number) === 1;
+    } catch (error) {
+      this.logger.error(`Error checking <%= moduleName %> existence:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Count total number of <%= classify(moduleName) %> entities
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_COUNT
+   *
+   * @returns Promise resolving to the count
+   */
+  async count(): Promise<number> {
+    try {
+      const binds: oracledb.BindParameters = {
+        p_total_count: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_COUNT',
+        binds,
+      );
+
+      return (result.outBinds?.p_total_count as number) || 0;
+    } catch (error) {
+      this.logger.error(`Error counting <%= moduleName %> entities:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Find <%= classify(moduleName) %> entities with pagination
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_SELECT_PAGINATED
+   *
+   * Oracle Pagination:
+   * - Uses OFFSET/FETCH NEXT syntax (Oracle 12c+)
+   * - Alternative: ROW_NUMBER() OVER (ORDER BY ...) for older versions
+   * - Returns both data cursor and total count
+   *
+   * @param options - Pagination options (page, limit, sort)
+   * @returns Promise resolving to paginated results
+   */
+  async findWithPagination(
+    options: PaginationOptions,
+  ): Promise<PaginatedResult<<%= classify(moduleName) %>Entity>> {
+    try {
+      this.logger.log(`Finding <%= moduleName %> entities with pagination: page=${options.page}, limit=${options.limit}`);
+
+      const binds: oracledb.BindParameters = {
+        p_page: { dir: oracledb.BIND_IN, type: oracledb.NUMBER, val: options.page },
+        p_limit: { dir: oracledb.BIND_IN, type: oracledb.NUMBER, val: options.limit },
+        p_sort_field: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: options.sort?.field || 'CREATED_AT' },
+        p_sort_direction: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: options.sort?.direction || 'DESC' },
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        p_total_count: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_SELECT_PAGINATED',
+        binds,
+      );
+
+      const rows = result.outBinds?.p_cursor as any[];
+      const items = rows ? rows.map((record) => OracleStoredProcMapper.fromDbResult(record)) : [];
+
+      const total = (result.outBinds?.p_total_count as number) || 0;
+      const totalPages = Math.ceil(total / options.limit);
+
+      return {
+        items,
+        page: options.page,
+        limit: options.limit,
+        total,
+        totalPages,
+        hasNext: options.page < totalPages,
+        hasPrevious: options.page > 1,
+      };
+    } catch (error) {
+      this.logger.error(`Error finding <%= moduleName %> with pagination:`, error);
+      throw new Error(`Failed to find <%= moduleName %> with pagination: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Save multiple <%= classify(moduleName) %> entities in a single transaction
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_INSERT_BATCH
+   *
+   * Oracle Batch Processing:
+   * - Option 1: Use Table Type (TYPE <%= constantCase(moduleName) %>_TABLE_TYPE AS TABLE OF VARCHAR2)
+   * - Option 2: Call INSERT procedure multiple times (current implementation)
+   * - All operations wrapped in single transaction
+   * - ROLLBACK if any insert fails
+   *
+   * @param entities - Array of entities to save
+   * @returns Promise resolving to array of saved entities
+   */
+  async saveMany(entities: <%= classify(moduleName) %>Entity[]): Promise<<%= classify(moduleName) %>Entity[]> {
+    try {
+      this.logger.log(`Saving ${entities.length} <%= moduleName %> entities in batch`);
+
+      // For production: Consider using Oracle Bulk Insert with Table Types
+      // This example shows sequential calls for simplicity
+      const savedEntities: <%= classify(moduleName) %>Entity[] = [];
+
+      for (const entity of entities) {
+        const saved = await this.save(entity);
+        savedEntities.push(saved);
+      }
+
+      this.logger.log(`Successfully saved ${savedEntities.length} <%= moduleName %> entities`);
+      return savedEntities;
+    } catch (error) {
+      this.logger.error(`Error saving multiple <%= moduleName %> entities:`, error);
+      throw new Error(`Failed to save multiple <%= moduleName %> entities: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Delete multiple <%= classify(moduleName) %> entities by their identifiers
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_DELETE_BATCH
+   *
+   * @param ids - Array of unique identifiers
+   * @returns Promise resolving to the number of deleted entities
+   */
+  async deleteMany(ids: string[]): Promise<number> {
+    try {
+      this.logger.log(`Deleting ${ids.length} <%= moduleName %> entities in batch`);
+
+      let deletedCount = 0;
+
+      for (const id of ids) {
+        const deleted = await this.delete(id);
+        if (deleted) {
+          deletedCount++;
+        }
+      }
+
+      this.logger.log(`Successfully deleted ${deletedCount} <%= moduleName %> entities`);
+      return deletedCount;
+    } catch (error) {
+      this.logger.error(`Error deleting multiple <%= moduleName %> entities:`, error);
+      throw new Error(`Failed to delete multiple <%= moduleName %> entities: ${(error as Error).message}`);
+    }
+  }
+}

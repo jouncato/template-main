@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "hexagonal-module": {
+      "description": "Generate a NestJS module following Hexagonal Architecture with configurable database and Kafka adapters",
+      "factory": "./hexagonal-module/index#hexagonalModule",
+      "schema": "./hexagonal-module/schema.json",
+      "aliases": ["hex-module", "hm"]
+    }
+  }
+}

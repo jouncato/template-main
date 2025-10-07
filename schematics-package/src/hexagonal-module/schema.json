@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "HexagonalModuleSchema",
+  "title": "Hexagonal Module Options Schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the hexagonal module",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the module?"
+    },
+    "database": {
+      "type": "string",
+      "description": "Database adapter to generate",
+      "enum": ["oracle", "mssql", "mongodb", "none"],
+      "default": "none",
+      "x-prompt": {
+        "message": "Which database would you like to use?",
+        "type": "list",
+        "items": [
+          { "value": "oracle", "label": "Oracle (with stored procedures)" },
+          { "value": "mssql", "label": "SQL Server (with stored procedures)" },
+          { "value": "mongodb", "label": "MongoDB (with Mongoose)" },
+          { "value": "none", "label": "None (in-memory or external)" }
+        ]
+      }
+    },
+    "kafka": {
+      "type": "string",
+      "description": "Kafka adapter configuration",
+      "enum": ["none", "producer", "consumer", "both"],
+      "default": "none",
+      "x-prompt": {
+        "message": "Which Kafka capabilities do you need?",
+        "type": "list",
+        "items": [
+          { "value": "none", "label": "None" },
+          { "value": "producer", "label": "Producer only" },
+          { "value": "consumer", "label": "Consumer only" },
+          { "value": "both", "label": "Both Producer and Consumer" }
+        ]
+      }
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to create the module",
+      "format": "path",
+      "default": "src/app"
+    },
+    "crudMode": {
+      "type": "string",
+      "description": "CRUD implementation mode for relational databases",
+      "enum": ["stored-proc", "orm", "mixed"],
+      "default": "stored-proc"
+    },
+    "ops": {
+      "type": "string",
+      "description": "Comma-separated list of operations to implement (select,insert,update,delete)",
+      "default": "select,insert,update,delete"
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "Run schematic without making changes",
+      "default": false,
+      "alias": "d"
+    },
+    "applyMigrations": {
+      "type": "boolean",
+      "description": "Generate database migration scripts",
+      "default": false
+    },
+    "auth": {
+      "type": "string",
+      "description": "Authentication adapter to include",
+      "enum": ["none", "jwt", "oauth2"],
+      "default": "none"
+    },
+    "schemaRegistry": {
+      "type": "string",
+      "description": "Schema registry for Kafka",
+      "enum": ["none", "confluent"],
+      "default": "none"
+    },
+    "skipTests": {
+      "type": "boolean",
+      "description": "Skip generating test files",
+      "default": false
+    },
+    "flat": {
+      "type": "boolean",
+      "description": "Generate files in flat structure (no subdirectories)",
+      "default": false
+    }
+  },
+  "required": ["name", "database"]
+}

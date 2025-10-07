@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(tree:*)",
+      "Bash(dir \"C:\\Proj-Dev\\template-main\\schematics-package\\src\\hexagonal-module\\files\\adapters\\outbound\\db\" /s /b)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
