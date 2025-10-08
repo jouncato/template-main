@@ -10,9 +10,11 @@ import {
   move,
   noop,
   url,
+  template,
+  renameTemplateFiles,
   SchematicsException,
 } from '@angular-devkit/schematics';
-import { normalize, strings } from '@angular-devkit/core';
+import { normalize, strings, join } from '@angular-devkit/core';
 import chalk from 'chalk';
 import { HexagonalModuleOptions } from './schema';
 
