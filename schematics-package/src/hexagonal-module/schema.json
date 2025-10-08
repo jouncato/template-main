@@ -99,6 +99,12 @@
       "type": "boolean",
       "description": "Generate files in flat structure (no subdirectories)",
       "default": false
+    },
+    "include-health": {
+      "type": "boolean",
+      "description": "Include health check endpoint for module infrastructure",
+      "default": true,
+      "alias": "includeHealth"
     }
   },
   "required": ["name", "database"]

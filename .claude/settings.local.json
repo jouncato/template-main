@@ -13,7 +13,9 @@
       "Bash(npm install:*)",
       "Bash(find:*)",
       "Bash(powershell:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git checkout:*)",
+      "Bash(dir \"C:\\Proj-Dev\\template-main\\schematics-package\\src\\hexagonal-module\\files\" /s /b)"
     ],
     "deny": [],
     "ask": []
