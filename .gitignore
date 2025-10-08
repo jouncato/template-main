@@ -146,12 +146,23 @@ dist
 .scannerwork
 .husky
 
-.semantics-package/node_modules
-.semantics-package/dist
-.semantics-package/package-lock.json
-.semantics-package/yarn.lock
-.semantics-package/pnpm-lock.yaml
-.semantics-package/bun.lockb
-.semantics-package/bun.lock 
+# Schematics package build artifacts
+schematics-package/node_modules
+schematics-package/dist
+schematics-package/package-lock.json
+schematics-package/yarn.lock
+schematics-package/pnpm-lock.yaml
+schematics-package/bun.lockb
+schematics-package/bun.lock
+
+# IDE and local configuration
+.claude/
+.vscode/
+old/
+
+# Test projects generated for validation
+test-*/
+*-test/
+demo-*/
 
 # End of https://www.toptal.com/developers/gitignore/api/node
