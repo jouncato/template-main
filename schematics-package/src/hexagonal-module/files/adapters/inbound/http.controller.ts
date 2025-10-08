@@ -1,0 +1,200 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+<% if (auth && auth !== 'none') { %>  UseGuards,<% } %>
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+<% if (auth && auth !== 'none') { %>  ApiBearerAuth,<% } %>
+} from '@nestjs/swagger';
+<% if (auth === 'jwt') { %>import { JwtAuthGuard } from '@share/guards/jwt-auth.guard';<% } %>
+<% if (auth === 'oauth2') { %>import { OAuth2Guard } from '@share/guards/oauth2.guard';<% } %>
+
+// Use Cases
+import { Create<%= classify(moduleName) %>UseCase } from '../../application/usecases/create-<%= dasherize(moduleName) %>.usecase';
+import { Get<%= classify(moduleName) %>ByIdUseCase } from '../../application/usecases/get-<%= dasherize(moduleName) %>-by-id.usecase';
+<% if (operations.includes('update')) { %>import { Update<%= classify(moduleName) %>UseCase } from '../../application/usecases/update-<%= dasherize(moduleName) %>.usecase';<% } %>
+<% if (operations.includes('delete')) { %>import { Delete<%= classify(moduleName) %>UseCase } from '../../application/usecases/delete-<%= dasherize(moduleName) %>.usecase';<% } %>
+
+// DTOs
+import { Create<%= classify(moduleName) %>Dto } from '../../application/dtos/create-<%= dasherize(moduleName) %>.dto';
+<% if (operations.includes('update')) { %>import { Update<%= classify(moduleName) %>Dto } from '../../application/dtos/update-<%= dasherize(moduleName) %>.dto';<% } %>
+import { <%= classify(moduleName) %>ResponseDto } from '../../application/dtos/<%= dasherize(moduleName) %>-response.dto';
+
+/**
+ * <%= classify(moduleName) %> HTTP Controller (Inbound Adapter)
+ *
+ * This controller serves as the inbound adapter in the hexagonal architecture.
+ * It translates HTTP requests into use case executions and formats responses.
+ *
+ * Responsibilities:
+ * - Handle HTTP routing and request validation
+ * - Delegate business logic to use cases
+ * - Transform use case results into HTTP responses
+ * - Provide OpenAPI/Swagger documentation
+ *
+ * Architecture Notes:
+ * - Controllers should be thin - no business logic here
+ * - All business logic resides in use cases and domain services
+ * - DTOs are used for input validation and output formatting
+ * - This adapter can be replaced with GraphQL, gRPC, etc. without affecting domain
+ *
+ * @see Create<%= classify(moduleName) %>UseCase
+ * @see Get<%= classify(moduleName) %>ByIdUseCase
+<% if (operations.includes('update')) { %> * @see Update<%= classify(moduleName) %>UseCase<% } %>
+<% if (operations.includes('delete')) { %> * @see Delete<%= classify(moduleName) %>UseCase<% } %>
+ */
+@ApiTags('<%= dasherize(moduleName) %>')
+@Controller('<%= dasherize(moduleName) %>')
+<% if (auth && auth !== 'none') { %>@ApiBearerAuth()
+<% if (auth === 'jwt') { %>@UseGuards(JwtAuthGuard)<% } %>
+<% if (auth === 'oauth2') { %>@UseGuards(OAuth2Guard)<% } %>
+<% } %>export class <%= classify(moduleName) %>Controller {
+  constructor(
+    private readonly create<%= classify(moduleName) %>UseCase: Create<%= classify(moduleName) %>UseCase,
+    private readonly get<%= classify(moduleName) %>ByIdUseCase: Get<%= classify(moduleName) %>ByIdUseCase,
+<% if (operations.includes('update')) { %>    private readonly update<%= classify(moduleName) %>UseCase: Update<%= classify(moduleName) %>UseCase,<% } %>
+<% if (operations.includes('delete')) { %>    private readonly delete<%= classify(moduleName) %>UseCase: Delete<%= classify(moduleName) %>UseCase,<% } %>
+  ) {}
+
+  /**
+   * Create a new <%= dasherize(moduleName) %>
+   *
+   * @param dto - The data for creating the <%= dasherize(moduleName) %>
+   * @returns The created <%= dasherize(moduleName) %> entity
+   */
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a new <%= dasherize(moduleName) %>',
+    description: 'Creates a new <%= dasherize(moduleName) %> entity with the provided data',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'The <%= dasherize(moduleName) %> has been successfully created',
+    type: <%= classify(moduleName) %>ResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data or business rule violation',
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'A <%= dasherize(moduleName) %> with the same identifier already exists',
+  })
+  async create(
+    @Body() dto: Create<%= classify(moduleName) %>Dto,
+  ): Promise<<%= classify(moduleName) %>ResponseDto> {
+    return this.create<%= classify(moduleName) %>UseCase.execute(dto);
+  }
+
+  /**
+   * Get a <%= dasherize(moduleName) %> by ID
+   *
+   * @param id - The unique identifier of the <%= dasherize(moduleName) %>
+   * @returns The <%= dasherize(moduleName) %> entity
+   */
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a <%= dasherize(moduleName) %> by ID',
+    description: 'Retrieves a specific <%= dasherize(moduleName) %> entity by its unique identifier',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the <%= dasherize(moduleName) %>',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The <%= dasherize(moduleName) %> has been successfully retrieved',
+    type: <%= classify(moduleName) %>ResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: '<%= classify(moduleName) %> with the specified ID was not found',
+  })
+  async findById(@Param('id') id: string): Promise<<%= classify(moduleName) %>ResponseDto> {
+    return this.get<%= classify(moduleName) %>ByIdUseCase.execute(id);
+  }
+<% if (operations.includes('update')) { %>
+  /**
+   * Update an existing <%= dasherize(moduleName) %>
+   *
+   * @param id - The unique identifier of the <%= dasherize(moduleName) %>
+   * @param dto - The data for updating the <%= dasherize(moduleName) %>
+   * @returns The updated <%= dasherize(moduleName) %> entity
+   */
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update a <%= dasherize(moduleName) %>',
+    description: 'Updates an existing <%= dasherize(moduleName) %> entity with the provided data',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the <%= dasherize(moduleName) %>',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The <%= dasherize(moduleName) %> has been successfully updated',
+    type: <%= classify(moduleName) %>ResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: '<%= classify(moduleName) %> with the specified ID was not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data or business rule violation',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: Update<%= classify(moduleName) %>Dto,
+  ): Promise<<%= classify(moduleName) %>ResponseDto> {
+    return this.update<%= classify(moduleName) %>UseCase.execute(id, dto);
+  }
+<% } %><% if (operations.includes('delete')) { %>
+  /**
+   * Delete a <%= dasherize(moduleName) %>
+   *
+   * @param id - The unique identifier of the <%= dasherize(moduleName) %>
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a <%= dasherize(moduleName) %>',
+    description: 'Deletes a <%= dasherize(moduleName) %> entity (soft delete by default)',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The unique identifier of the <%= dasherize(moduleName) %>',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The <%= dasherize(moduleName) %> has been successfully deleted',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: '<%= classify(moduleName) %> with the specified ID was not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Deletion violates business rules',
+  })
+  async delete(@Param('id') id: string): Promise<void> {
+    return this.delete<%= classify(moduleName) %>UseCase.execute(id);
+  }
+<% } %>}

@@ -2,7 +2,7 @@ import { Injectable, Inject<% if (database !== 'none') { %>, Logger<% } %> } fro
 <% if (database !== 'none') { %>import { I<%= classify(moduleName) %>Repository } from '../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';<% } %>
 <% if (kafka === 'producer' || kafka === 'both') { %>import { I<%= classify(moduleName) %>EventPublisher } from '../../domain/ports/i-<%= dasherize(moduleName) %>-event-publisher.port';<% } %>
 <% if (database !== 'none') { %>import { <%= classify(moduleName) %>DomainService } from '../../domain/services/<%= dasherize(moduleName) %>-domain.service';<% } %>
-import { <%= classify(moduleName) %> } from '../../domain/entities/<%= dasherize(moduleName) %>.entity';
+import { <%= classify(moduleName) %>Entity } from '../../domain/entities/<%= dasherize(moduleName) %>.entity';
 import { Create<%= classify(moduleName) %>Dto } from '../dtos/create-<%= dasherize(moduleName) %>.dto';
 import { <%= classify(moduleName) %>ResponseDto } from '../dtos/<%= dasherize(moduleName) %>-response.dto';
 
@@ -87,7 +87,7 @@ export class Create<%= classify(moduleName) %>UseCase {
 
 <% } %>      // Step 2: Create the domain entity
       // The entity encapsulates domain logic and invariants
-      const entity = <%= classify(moduleName) %>.create({
+      const entity = <%= classify(moduleName) %>Entity.create({
         name: dto.name,
         description: dto.description,
         isActive: dto.isActive ?? true,

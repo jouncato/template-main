@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { <%= classify(moduleName) %> } from '../../domain/entities/<%= dasherize(moduleName) %>.entity';
+import { <%= classify(moduleName) %>Entity } from '../../domain/entities/<%= dasherize(moduleName) %>.entity';
 
 /**
  * Response Data Transfer Object for <%= classify(moduleName) %>
@@ -103,7 +103,7 @@ export class <%= classify(moduleName) %>ResponseDto {
    * const dto = <%= classify(moduleName) %>ResponseDto.fromEntity(entity);
    * ```
    */
-  static fromEntity(entity: <%= classify(moduleName) %>): <%= classify(moduleName) %>ResponseDto {
+  static fromEntity(entity: <%= classify(moduleName) %>Entity): <%= classify(moduleName) %>ResponseDto {
     const dto = new <%= classify(moduleName) %>ResponseDto();
 
     dto.id = entity.id;
@@ -134,7 +134,7 @@ export class <%= classify(moduleName) %>ResponseDto {
    * const dtos = <%= classify(moduleName) %>ResponseDto.fromEntities(entities);
    * ```
    */
-  static fromEntities(entities: <%= classify(moduleName) %>[]): <%= classify(moduleName) %>ResponseDto[] {
+  static fromEntities(entities: <%= classify(moduleName) %>Entity[]): <%= classify(moduleName) %>ResponseDto[] {
     return entities.map(entity => this.fromEntity(entity));
   }
 }

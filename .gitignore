@@ -146,4 +146,12 @@ dist
 .scannerwork
 .husky
 
+.semantics-package/node_modules
+.semantics-package/dist
+.semantics-package/package-lock.json
+.semantics-package/yarn.lock
+.semantics-package/pnpm-lock.yaml
+.semantics-package/bun.lockb
+.semantics-package/bun.lock 
+
 # End of https://www.toptal.com/developers/gitignore/api/node
