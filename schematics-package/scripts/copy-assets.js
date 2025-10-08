@@ -53,22 +53,29 @@ ROOT_FILES.forEach(file => {
   }
 });
 
-// Copy schema.json files
-const schematicsDir = path.join(SOURCE_DIR, 'hexagonal-module');
-const schematicsDistDir = path.join(DIST_DIR, 'hexagonal-module');
+// Copy schema.json files and template directories for each schematic
+const schematics = ['application', 'hexagonal-module'];
 
-if (fs.existsSync(schematicsDir)) {
-  const schemaPath = path.join(schematicsDir, 'schema.json');
-  if (fs.existsSync(schemaPath)) {
-    copyFile(schemaPath, path.join(schematicsDistDir, 'schema.json'));
-  }
+schematics.forEach(schematicName => {
+  const schematicsDir = path.join(SOURCE_DIR, schematicName);
+  const schematicsDistDir = path.join(DIST_DIR, schematicName);
 
-  // Copy template files directory
-  const filesDir = path.join(schematicsDir, 'files');
-  if (fs.existsSync(filesDir)) {
-    const filesDistDir = path.join(schematicsDistDir, 'files');
-    copyDirectory(filesDir, filesDistDir);
+  if (fs.existsSync(schematicsDir)) {
+    console.log(`\n📁 Processing ${schematicName}...`);
+    
+    const schemaPath = path.join(schematicsDir, 'schema.json');
+    if (fs.existsSync(schemaPath)) {
+      copyFile(schemaPath, path.join(schematicsDistDir, 'schema.json'));
+    }
+
+    // Copy template files directory
+    const filesDir = path.join(schematicsDir, 'files');
+    if (fs.existsSync(filesDir)) {
+      const filesDistDir = path.join(schematicsDistDir, 'files');
+      console.log(`  Copying template files...`);
+      copyDirectory(filesDir, filesDistDir);
+    }
   }
-}
+});
 
 console.log('\n✅ Asset copying completed!\n');

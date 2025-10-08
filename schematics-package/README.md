@@ -1,10 +1,13 @@
-# @template/schematics - Hexagonal Architecture Module Generator
+# @template/schematics - NestJS Application & Module Generator
 
-NestJS Schematics para generar módulos siguiendo Arquitectura Hexagonal (Puertos y Adaptadores) con soporte para Oracle, SQL Server, MongoDB y Kafka.
+NestJS Schematics para generar **aplicaciones completas** y **módulos hexagonales** con soporte para Oracle, SQL Server, MongoDB y Kafka.
 
 ## 📋 Tabla de Contenidos
 
 - [Instalación](#instalación)
+- [Schematics Disponibles](#schematics-disponibles)
+  - [Application - Generar Proyecto Completo](#application---generar-proyecto-completo)
+  - [Hexagonal Module - Generar Módulos](#hexagonal-module---generar-módulos)
 - [Uso Rápido](#uso-rápido)
 - [Opciones del CLI](#opciones-del-cli)
 - [Arquitectura Generada](#arquitectura-generada)
@@ -42,7 +45,92 @@ npm link
 
 ---
 
+## 🎯 Schematics Disponibles
+
+### Application - Generar Proyecto Completo
+
+Genera una aplicación NestJS completa con arquitectura hexagonal, infraestructura compartida (Oracle, MSSQL, Kafka, HTTP), configuración de despliegue y tests.
+
+```bash
+nest g @template/schematics:application <nombre-proyecto> [opciones]
+
+# Alias disponibles
+nest g @template/schematics:app <nombre-proyecto>
+nest g @template/schematics:new <nombre-proyecto>
+```
+
+**Características del proyecto generado:**
+- ✅ Arquitectura hexagonal base
+- ✅ Infraestructura compartida (Oracle, MSSQL, Kafka, HTTP)
+- ✅ Configuración APM (Elastic)
+- ✅ Logger personalizado (Winston)
+- ✅ Transaction ID tracking
+- ✅ Fastify con compresión y seguridad
+- ✅ Swagger/OpenAPI
+- ✅ Tests unitarios completos
+- ✅ Dockerfile multi-stage
+- ✅ Configuración de despliegue
+- ✅ ESLint, Prettier, Commitlint
+
+**Opciones:**
+
+| Opción | Valores | Default | Descripción |
+|--------|---------|---------|-------------|
+| `name` | `string` | - | Nombre de la aplicación (requerido) |
+| `--directory` | `string` | `<name>` | Directorio donde crear el proyecto |
+| `--package-manager` | `npm` \| `yarn` \| `pnpm` | `npm` | Gestor de paquetes |
+| `--skip-git` | `boolean` | `false` | No inicializar repositorio git |
+| `--skip-install` | `boolean` | `false` | No instalar dependencias |
+| `--strict` | `boolean` | `false` | Modo estricto de TypeScript |
+
+**Ejemplo:**
+
+```bash
+# Generar aplicación completa
+nest g @template/schematics:application my-microservice
+
+# Con opciones personalizadas
+nest g @template/schematics:application my-app \
+  --package-manager=pnpm \
+  --skip-install \
+  --directory=apps/my-app
+```
+
+### Hexagonal Module - Generar Módulos
+
+Genera módulos individuales siguiendo arquitectura hexagonal dentro de un proyecto existente.
+
+```bash
+nest g @template/schematics:hexagonal-module <nombre-modulo> [opciones]
+
+# Alias disponibles
+nest g @template/schematics:hex-module <nombre-modulo>
+nest g @template/schematics:hm <nombre-modulo>
+```
+
+---
+
 ## ⚡ Uso Rápido
+
+### Generar Aplicación Completa
+
+```bash
+# Crear nuevo microservicio
+nest g @template/schematics:application payments-service
+
+# Navegar al proyecto
+cd payments-service
+
+# Instalar dependencias (si usaste --skip-install)
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales
+
+# Ejecutar en desarrollo
+npm run start:dev
+```
 
 ### Generar Módulo con Oracle y Kafka
 

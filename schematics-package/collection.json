@@ -1,6 +1,12 @@
 {
   "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
   "schematics": {
+    "application": {
+      "description": "Generate a complete NestJS application with Hexagonal Architecture, Oracle, MSSQL, MongoDB and Kafka support",
+      "factory": "./application/index#application",
+      "schema": "./application/schema.json",
+      "aliases": ["app", "new"]
+    },
     "hexagonal-module": {
       "description": "Generate a NestJS module following Hexagonal Architecture with configurable database and Kafka adapters",
       "factory": "./hexagonal-module/index#hexagonalModule",

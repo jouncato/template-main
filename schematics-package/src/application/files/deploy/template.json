@@ -1,0 +1,19 @@
+{
+  "Files": [
+    {
+      "template_name": "template-ocp",
+      "params_file": "deploy_dev.params",
+      "environment": "DEV_OP"
+    },
+    {
+      "template_name": "template-ocp",
+      "params_file": "deploy_qa.params",
+      "environment": "QA_OP"
+    },
+    {
+      "template_name": "template-ocp",
+      "params_file": "deploy_prod.params",
+      "environment": "PROD_OP"
+    }
+  ]
+}

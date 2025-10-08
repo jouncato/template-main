@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "ApplicationSchema",
+  "title": "NestJS Application Options Schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the application",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the application?"
+    },
+    "directory": {
+      "type": "string",
+      "description": "The directory name to create",
+      "alias": "dir"
+    },
+    "packageManager": {
+      "type": "string",
+      "description": "Package manager to use",
+      "enum": ["npm", "yarn", "pnpm"],
+      "default": "npm",
+      "alias": "pm"
+    },
+    "skipGit": {
+      "type": "boolean",
+      "description": "Skip git repository initialization",
+      "default": false,
+      "alias": "sg"
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "description": "Skip package installation",
+      "default": false,
+      "alias": "si"
+    },
+    "strict": {
+      "type": "boolean",
+      "description": "Enable strict mode in TypeScript",
+      "default": false
+    }
+  },
+  "required": ["name"]
+}
