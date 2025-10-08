@@ -25,12 +25,17 @@
     "build:watch": "tsc -p tsconfig.json --watch",
     "clean": "rimraf dist",
     "copy:assets": "node scripts/copy-assets.js",
+    "menu": "node scripts/interactive-menu.js",
+    "generate": "node scripts/interactive-menu.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "prepublishOnly": "npm run build",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix"
+  },
+  "bin": {
+    "template-generate": "./scripts/interactive-menu.js"
   },
   "dependencies": {
     "@angular-devkit/core": "^18.2.0",

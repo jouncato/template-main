@@ -7,6 +7,7 @@
 
 Generador de proyectos y módulos NestJS con **Arquitectura Hexagonal**, soporte para **Oracle**, **SQL Server**, **MongoDB** y **Kafka**.
 
+### Autor: Joel A. Paez Rodriguez
 ---
 
 ## 🎯 Características
@@ -66,7 +67,19 @@ npm run build
 npm link
 ```
 
-### 2. Generar Tu Primer Proyecto
+### 2. Usar el Menú Interactivo 🎮 (Recomendado)
+
+```bash
+# Opción 1: Desde schematics-package
+npm run menu
+
+# Opción 2: Comando global (después de npm link)
+template-generate
+```
+
+El menú interactivo te guiará paso a paso para generar proyectos y módulos sin necesidad de recordar todos los parámetros.
+
+### 3. O Usar Comandos Directos
 
 ```bash
 # Generar aplicación
