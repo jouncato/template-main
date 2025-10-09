@@ -229,8 +229,6 @@ export function hexagonalModule(options: HexagonalModuleOptions): Rule {
     return chain([
       // Protect schematic source files from being modified
       protectSchematicFiles(),
-      // Clean up shared infrastructure according to selected capabilities
-      cleanupSharedInfrastructure(normalizedOptions),
       generateCoreFiles(normalizedOptions),
       generateDomainLayer(normalizedOptions),
       generateApplicationLayer(normalizedOptions),
@@ -238,6 +236,8 @@ export function hexagonalModule(options: HexagonalModuleOptions): Rule {
       generateInfrastructure(normalizedOptions),
       generateTests(normalizedOptions),
       generateDocumentation(normalizedOptions),
+      // Clean up shared infrastructure AFTER generation according to selected capabilities
+      cleanupSharedInfrastructure(normalizedOptions),
       logSuccess(normalizedOptions),
     ])(tree, context);
   };
@@ -374,35 +374,107 @@ function protectSchematicFiles(): Rule {
 /**
  * Cleanup rule: remove unselected shared infrastructure adapters
  * - Database adapters: keep only the one selected in options.database (oracle | mssql | mongodb)
- * - Kafka: remove shared/infrastructure/kafka when options.kafka === 'none'
+ * - Kafka: remove share/infrastructure/kafka when options.kafka === 'none'
  *
  * The cleanup is idempotent and only affects the specified directories under
- *   <options.path>/shared/infrastructure
+ *   <options.path>/share/infrastructure
+ * 
+ * This runs AFTER file generation to clean up unselected adapters from the microservice
  */
 function cleanupSharedInfrastructure(options: NormalizedOptions): Rule {
   return (tree: Tree, context: SchematicContext) => {
     // Compute shared infrastructure base path relative to provided --path
-    const pathBase = options.path ? normalize(options.path) : normalize('src/app');
-    const sharedInfraBase = join(pathBase, 'shared', 'infrastructure');
+    // Note: The directory is 'share' not 'shared' in the microservice structure
+    const pathBase = options.path ? normalize(options.path) : normalize('src');
+    const sharedInfraBase = join(pathBase, 'share', 'infrastructure');
 
-    // Database adapters cleanup
-    const dbAdapters = ['oracle', 'mssql', 'mongodb'] as const;
-    dbAdapters.forEach((adapter) => {
-      if (options.database !== adapter) {
-        const toDelete = join(sharedInfraBase, adapter);
-        if (tree.exists(toDelete)) {
-          tree.delete(toDelete);
+    context.logger.info(chalk.cyan(`\n🧹 Cleaning up unselected infrastructure adapters...`));
+    context.logger.info(chalk.gray(`   Base path: ${sharedInfraBase}`));
+    context.logger.info(chalk.gray(`   Selected database: ${options.database}`));
+    context.logger.info(chalk.gray(`   Selected kafka: ${options.kafka}`));
+
+    // Helper function to delete all files within a directory recursively
+    const deleteDirectoryContents = (dirPath: string): number => {
+      let deletedCount = 0;
+      const dir = tree.getDir(dirPath);
+      
+      // Delete all files in the directory
+      dir.subfiles.forEach((fileName) => {
+        const filePath = join(normalize(dirPath), fileName);
+        if (tree.exists(filePath)) {
+          tree.delete(filePath);
+          deletedCount++;
         }
+      });
+      
+      // Recursively delete contents of subdirectories
+      dir.subdirs.forEach((subDirName) => {
+        const subDirPath = join(normalize(dirPath), subDirName);
+        deletedCount += deleteDirectoryContents(subDirPath as string);
+      });
+      
+      return deletedCount;
+    };
+
+    // Database adapters cleanup: remove all except the selected one
+    const dbAdapters = ['oracle', 'mssql', 'mongodb'] as const;
+    let removedCount = 0;
+    
+    dbAdapters.forEach((adapter) => {
+      const adapterDir = join(sharedInfraBase, adapter);
+      const shouldKeep = options.database === adapter;
+      
+      try {
+        const dir = tree.getDir(adapterDir);
+        const exists = dir !== null;
+        
+        context.logger.info(chalk.gray(`   Checking ${adapter}/: exists=${exists}, shouldKeep=${shouldKeep}`));
+        
+        if (!shouldKeep && options.database !== 'none' && exists) {
+          context.logger.info(chalk.yellow(`   Removing contents of: ${adapterDir}`));
+          const deleted = deleteDirectoryContents(adapterDir);
+          removedCount += deleted;
+          context.logger.info(chalk.green(`   ✓ Cleaned ${adapter}/ - removed ${deleted} file(s)`));
+        }
+      } catch (e) {
+        // Directory doesn't exist, skip
+        context.logger.info(chalk.gray(`   ${adapter}/ does not exist, skipping`));
       }
     });
+
+    // If database is 'none', remove all database adapters
+    if (options.database === 'none') {
+      dbAdapters.forEach((adapter) => {
+        const adapterDir = join(sharedInfraBase, adapter);
+        try {
+          const dir = tree.getDir(adapterDir);
+          if (dir !== null) {
+            const deleted = deleteDirectoryContents(adapterDir);
+            removedCount += deleted;
+            context.logger.info(chalk.green(`   ✓ Cleaned ${adapter}/ - removed ${deleted} file(s) (database=none)`));
+          }
+        } catch (e) {
+          // Directory doesn't exist, skip
+        }
+      });
+    }
 
     // Kafka cleanup: remove only when kafka === 'none'
     if (options.kafka === 'none') {
       const kafkaDir = join(sharedInfraBase, 'kafka');
-      if (tree.exists(kafkaDir)) {
-        tree.delete(kafkaDir);
+      try {
+        const dir = tree.getDir(kafkaDir);
+        if (dir !== null) {
+          const deleted = deleteDirectoryContents(kafkaDir);
+          removedCount += deleted;
+          context.logger.info(chalk.green(`   ✓ Cleaned kafka/ - removed ${deleted} file(s)`));
+        }
+      } catch (e) {
+        // Directory doesn't exist, skip
       }
     }
+
+    context.logger.info(chalk.cyan(`   Cleanup completed. Removed ${removedCount} file(s).\n`));
 
     return tree;
   };
