@@ -165,6 +165,9 @@ function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
     applyMigrations: options.applyMigrations ?? options['apply-migrations'] ?? false,
     schemaRegistry: options.schemaRegistry || options['schema-registry'] || 'none',
     skipTests: options.skipTests ?? options['skip-tests'] ?? false,
+    includeHealth: options.includeHealth ?? options['include-health'] ?? true,
+    includeJob: options.includeJob ?? options['include-job'] ?? false,
+    keepServiceModule: options.keepServiceModule ?? options['keep-service-module'] ?? true,
   };
 
   // Validate inputs
@@ -201,6 +204,9 @@ function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
     crudMode,
     ops,
     schemaRegistry,
+    includeHealth: normalizedOptions.includeHealth,
+    includeJob: normalizedOptions.includeJob,
+    keepServiceModule: normalizedOptions.keepServiceModule,
   };
 }
 
@@ -238,6 +244,8 @@ export function hexagonalModule(options: HexagonalModuleOptions): Rule {
       generateDocumentation(normalizedOptions),
       // Clean up shared infrastructure AFTER generation according to selected capabilities
       cleanupSharedInfrastructure(normalizedOptions),
+      // Conditionally remove service.module.ts for job-only modules
+      cleanupServiceModule(normalizedOptions),
       logSuccess(normalizedOptions),
     ])(tree, context);
   };
@@ -254,6 +262,13 @@ function logGenerationPlan(options: NormalizedOptions, context: SchematicContext
   context.logger.info(chalk.cyan(`Auth:            ${options.auth || 'none'}`));
   context.logger.info(chalk.cyan(`Schema Registry: ${options.schemaRegistry}`));
   context.logger.info(chalk.cyan(`Tests:           ${options.skipTests ? 'Skip' : 'Generate'}`));
+  context.logger.info(chalk.cyan(`Include Job:     ${options.includeJob ? 'Yes' : 'No'}`));
+  
+  if (options.includeJob) {
+    const serviceModuleStatus = options.keepServiceModule ? 'Keep' : 'Remove';
+    context.logger.info(chalk.cyan(`Service Module:  ${serviceModuleStatus}`));
+  }
+  
   context.logger.info('');
 }
 
@@ -366,6 +381,35 @@ function protectSchematicFiles(): Rule {
       }
       return originalRename(from, to);
     };
+
+    return tree;
+  };
+}
+
+/**
+ * Conditional cleanup rule: remove service.module.ts if job functionality is enabled
+ * and user chose not to keep it
+ * 
+ * Behavior:
+ * - If includeJob is false: service.module.ts is always kept (default behavior)
+ * - If includeJob is true AND keepServiceModule is false: service.module.ts is removed
+ * - If includeJob is true AND keepServiceModule is true: service.module.ts is kept
+ */
+function cleanupServiceModule(options: NormalizedOptions): Rule {
+  return (tree: Tree, context: SchematicContext) => {
+    // Only proceed if job functionality is enabled AND user chose not to keep service.module.ts
+    if (!options.includeJob || options.keepServiceModule) {
+      return tree;
+    }
+
+    const serviceModulePath = join(normalize(options.modulePath), 'service.module.ts');
+    
+    if (tree.exists(serviceModulePath)) {
+      context.logger.info(chalk.cyan(`\n🗑️  Removing service.module.ts (job-only module)...`));
+      tree.delete(serviceModulePath);
+      context.logger.info(chalk.green(`   ✓ Removed service.module.ts`));
+      context.logger.info(chalk.gray(`   Note: This is a job/worker-only module\n`));
+    }
 
     return tree;
   };

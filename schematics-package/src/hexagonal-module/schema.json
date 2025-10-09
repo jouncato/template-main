@@ -105,6 +105,27 @@
       "description": "Include health check endpoint for module infrastructure",
       "default": true,
       "alias": "includeHealth"
+    },
+    "include-job": {
+      "type": "boolean",
+      "description": "Include job/worker functionality (async processing, scheduled tasks)",
+      "default": false,
+      "alias": "includeJob",
+      "x-prompt": {
+        "message": "Will this module include job/worker functionality?",
+        "type": "confirmation"
+      }
+    },
+    "keep-service-module": {
+      "type": "boolean",
+      "description": "Keep service.module.ts when job functionality is enabled (only asked if include-job is true)",
+      "default": true,
+      "alias": "keepServiceModule",
+      "x-prompt": {
+        "message": "Keep service.module.ts for this job module?",
+        "type": "confirmation",
+        "when": "includeJob === true"
+      }
     }
   },
   "required": ["name", "database"]

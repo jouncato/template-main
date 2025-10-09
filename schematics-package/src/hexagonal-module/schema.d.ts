@@ -68,4 +68,26 @@ export interface HexagonalModuleOptions {
    * Generate files in flat structure
    */
   flat?: boolean;
+
+  /**
+   * Include health check endpoint for module infrastructure
+   * Supports both kebab-case (include-health) and camelCase (includeHealth)
+   */
+  'include-health'?: boolean;
+  includeHealth?: boolean;
+
+  /**
+   * Include job/worker functionality (async processing, scheduled tasks)
+   * Supports both kebab-case (include-job) and camelCase (includeJob)
+   */
+  'include-job'?: boolean;
+  includeJob?: boolean;
+
+  /**
+   * Keep service.module.ts when job functionality is enabled
+   * Only relevant if include-job is true
+   * Supports both kebab-case (keep-service-module) and camelCase (keepServiceModule)
+   */
+  'keep-service-module'?: boolean;
+  keepServiceModule?: boolean;
 }
