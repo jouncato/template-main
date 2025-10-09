@@ -13,13 +13,13 @@
 #### ✅ Schematic: Application
 - **Propósito:** Generar proyectos NestJS completos
 - **Ubicación:** `schematics-package/src/application/`
-- **Comando:** `nest g @template/schematics:application <nombre>`
+- **Comando:** `nest g -c @template/schematics application <nombre>`
 - **Estado:** ✅ Implementado y validado
 
 #### ✅ Schematic: Hexagonal Module
 - **Propósito:** Generar módulos hexagonales
 - **Ubicación:** `schematics-package/src/hexagonal-module/`
-- **Comando:** `nest g @template/schematics:hexagonal-module <nombre>`
+- **Comando:** `nest g -c @template/schematics hexagonal-module <nombre>`
 - **Estado:** ✅ Implementado y validado
 
 ### 2. Documentación Técnica
@@ -74,8 +74,8 @@
 ### 2. Generación de Proyectos
 
 ```bash
-✅ nest g @template/schematics:application demo
-✅ nest g @template/schematics:hexagonal-module products --database=oracle
+✅ nest g -c @template/schematics application demo
+✅ nest g -c @template/schematics hexagonal-module products --database=oracle
 ```
 
 **Resultado:** Proyectos generados correctamente
@@ -133,7 +133,7 @@ npm link
 #### 2. Generar Proyecto
 
 ```bash
-nest g @template/schematics:application my-service
+nest g -c @template/schematics application my-service
 cd my-service
 npm install
 cp .env.example .env
@@ -143,7 +143,7 @@ npm run start:dev
 #### 3. Generar Módulos
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=producer \
   --path=src/app
@@ -155,7 +155,7 @@ nest g @template/schematics:hexagonal-module payments \
 
 ```bash
 # Generar proyecto de prueba
-nest g @template/schematics:application qa-test --skip-install
+nest g -c @template/schematics application qa-test --skip-install
 
 # Verificar estructura
 cd qa-test
@@ -228,9 +228,9 @@ template-main/
 ### ✅ Caso 1: Microservicio con Oracle y Kafka
 
 ```bash
-nest g @template/schematics:application payments-service
+nest g -c @template/schematics application payments-service
 cd payments-service
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --crud-mode=stored-proc
@@ -239,9 +239,9 @@ nest g @template/schematics:hexagonal-module payments \
 ### ✅ Caso 2: API Gateway con MongoDB
 
 ```bash
-nest g @template/schematics:application api-gateway
+nest g -c @template/schematics application api-gateway
 cd api-gateway
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --auth=jwt
@@ -250,9 +250,9 @@ nest g @template/schematics:hexagonal-module users \
 ### ✅ Caso 3: Servicio sin Base de Datos
 
 ```bash
-nest g @template/schematics:application proxy-service
+nest g -c @template/schematics application proxy-service
 cd proxy-service
-nest g @template/schematics:hexagonal-module external-api \
+nest g -c @template/schematics hexagonal-module external-api \
   --database=none
 ```
 

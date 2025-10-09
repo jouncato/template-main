@@ -88,7 +88,7 @@ Antes de ejecutar, muestra un resumen:
   Skip Git:         No
   Modo Estricto:    Sí
 
-  Comando: nest g @template/schematics:application payments-service --directory="apps/payments-service" --package-manager=pnpm --strict
+  Comando: nest g -c @template/schematics application payments-service --directory="apps/payments-service" --package-manager=pnpm --strict
 
 ¿Ejecutar generación? (S/n):
 ```
@@ -182,7 +182,7 @@ Al finalizar exitosamente, muestra:
   Ruta:             src/app
   Skip Tests:       No
 
-  Comando: nest g @template/schematics:hexagonal-module payments --database=oracle --kafka=both --ops=select,insert,update --auth=jwt --schema-registry=confluent --path=src/app
+  Comando: nest g -c @template/schematics hexagonal-module payments --database=oracle --kafka=both --ops=select,insert,update --auth=jwt --schema-registry=confluent --path=src/app
 
 ¿Ejecutar generación? (S/n):
 ```
@@ -209,25 +209,25 @@ Muestra ejemplos completos de comandos para casos de uso comunes:
 
 ### Ejemplo 1: Microservicio de Pagos
 ```bash
-nest g @template/schematics:application payments-service
+nest g -c @template/schematics application payments-service
 cd payments-service
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle --kafka=both --auth=jwt
 ```
 
 ### Ejemplo 2: API Gateway
 ```bash
-nest g @template/schematics:application api-gateway
+nest g -c @template/schematics application api-gateway
 cd api-gateway
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb --crud-mode=orm --auth=jwt
 ```
 
 ### Ejemplo 3: Servicio Proxy
 ```bash
-nest g @template/schematics:application proxy-service
+nest g -c @template/schematics application proxy-service
 cd proxy-service
-nest g @template/schematics:hexagonal-module external-api \
+nest g -c @template/schematics hexagonal-module external-api \
   --database=none --kafka=none
 ```
 
@@ -246,8 +246,8 @@ Muestra información sobre:
 
 - **Comandos útiles**
   ```bash
-  nest g @template/schematics:application --help
-  nest g @template/schematics:hexagonal-module --help
+  nest g -c @template/schematics application --help
+  nest g -c @template/schematics hexagonal-module --help
   ```
 
 - **Soporte**

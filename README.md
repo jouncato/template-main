@@ -83,13 +83,13 @@ El menú interactivo te guiará paso a paso para generar proyectos y módulos si
 
 ```bash
 # Generar aplicación
-nest g @template/schematics:application my-service
+nest g -c @template/schematics application my-service
 
 # Navegar al proyecto
 cd my-service
 
 # Generar módulo
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=producer \
   --path=src/app
@@ -125,7 +125,7 @@ npm run start:dev
 ### Generar Aplicación
 
 ```bash
-nest g @template/schematics:application <nombre> [opciones]
+nest g -c @template/schematics application <nombre> [opciones]
 
 # Opciones principales:
 #   --directory <dir>          Directorio destino
@@ -137,7 +137,7 @@ nest g @template/schematics:application <nombre> [opciones]
 ### Generar Módulo Hexagonal
 
 ```bash
-nest g @template/schematics:hexagonal-module <nombre> [opciones]
+nest g -c @template/schematics hexagonal-module <nombre> [opciones]
 
 # Opciones principales:
 #   --database <db>            oracle | mssql | mongodb | none
@@ -156,11 +156,11 @@ nest g @template/schematics:hexagonal-module <nombre> [opciones]
 
 ```bash
 # 1. Generar aplicación
-nest g @template/schematics:application payments-service
+nest g -c @template/schematics application payments-service
 cd payments-service
 
 # 2. Generar módulo de pagos
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --crud-mode=stored-proc \
@@ -169,7 +169,7 @@ nest g @template/schematics:hexagonal-module payments \
   --path=src/app
 
 # 3. Generar módulo de transacciones
-nest g @template/schematics:hexagonal-module transactions \
+nest g -c @template/schematics hexagonal-module transactions \
   --database=oracle \
   --kafka=producer \
   --crud-mode=stored-proc \
@@ -186,11 +186,11 @@ npm run start:dev
 
 ```bash
 # 1. Generar aplicación
-nest g @template/schematics:application api-gateway
+nest g -c @template/schematics application api-gateway
 cd api-gateway
 
 # 2. Generar módulo de usuarios
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --kafka=producer \

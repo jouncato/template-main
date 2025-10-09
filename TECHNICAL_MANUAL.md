@@ -134,7 +134,7 @@ Genera una aplicación NestJS completa con:
 ### 4.2 Sintaxis del Comando
 
 ```bash
-nest g @template/schematics:application <nombre> [opciones]
+nest g -c @template/schematics application <nombre> [opciones]
 
 # Alias disponibles
 nest g @template/schematics:app <nombre> [opciones]
@@ -170,7 +170,7 @@ nest g @template/schematics:new <nombre> [opciones]
 #### Ejemplo 1: Generación Básica
 
 ```bash
-nest g @template/schematics:application my-microservice
+nest g -c @template/schematics application my-microservice
 ```
 
 **Resultado:**
@@ -181,7 +181,7 @@ nest g @template/schematics:application my-microservice
 #### Ejemplo 2: Generación con Directorio Personalizado
 
 ```bash
-nest g @template/schematics:application payments \
+nest g -c @template/schematics application payments \
   --directory=apps/payments-service
 ```
 
@@ -192,7 +192,7 @@ nest g @template/schematics:application payments \
 #### Ejemplo 3: Generación sin Instalación (CI/CD)
 
 ```bash
-nest g @template/schematics:application api-gateway \
+nest g -c @template/schematics application api-gateway \
   --skip-install \
   --skip-git
 ```
@@ -205,7 +205,7 @@ nest g @template/schematics:application api-gateway \
 #### Ejemplo 4: Generación con pnpm
 
 ```bash
-nest g @template/schematics:application orders-service \
+nest g -c @template/schematics application orders-service \
   --package-manager=pnpm
 ```
 
@@ -216,7 +216,7 @@ nest g @template/schematics:application orders-service \
 #### Ejemplo 5: Dry Run (Vista Previa)
 
 ```bash
-nest g @template/schematics:application demo \
+nest g -c @template/schematics application demo \
   --dry-run
 ```
 
@@ -292,7 +292,7 @@ Genera módulos individuales siguiendo arquitectura hexagonal dentro de un proye
 ### 5.2 Sintaxis del Comando
 
 ```bash
-nest g @template/schematics:hexagonal-module <nombre> [opciones]
+nest g -c @template/schematics hexagonal-module <nombre> [opciones]
 
 # Alias disponibles
 nest g @template/schematics:hex-module <nombre> [opciones]
@@ -352,7 +352,7 @@ nest g @template/schematics:hm <nombre> [opciones]
 #### Ejemplo 1: Módulo con Oracle y Kafka
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --crud-mode=stored-proc \
@@ -369,7 +369,7 @@ nest g @template/schematics:hexagonal-module payments \
 #### Ejemplo 2: Módulo con SQL Server
 
 ```bash
-nest g @template/schematics:hexagonal-module orders \
+nest g -c @template/schematics hexagonal-module orders \
   --database=mssql \
   --crud-mode=stored-proc \
   --ops=select,insert,update,delete \
@@ -383,7 +383,7 @@ nest g @template/schematics:hexagonal-module orders \
 #### Ejemplo 3: Módulo con MongoDB
 
 ```bash
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --kafka=producer \
@@ -398,7 +398,7 @@ nest g @template/schematics:hexagonal-module users \
 #### Ejemplo 4: Módulo sin Base de Datos (API Externa)
 
 ```bash
-nest g @template/schematics:hexagonal-module external-api \
+nest g -c @template/schematics hexagonal-module external-api \
   --database=none \
   --kafka=none \
   --path=src/app
@@ -412,7 +412,7 @@ nest g @template/schematics:hexagonal-module external-api \
 #### Ejemplo 5: Módulo con Autenticación JWT
 
 ```bash
-nest g @template/schematics:hexagonal-module secure-payments \
+nest g -c @template/schematics hexagonal-module secure-payments \
   --database=oracle \
   --kafka=producer \
   --auth=jwt \
@@ -488,7 +488,7 @@ src/app/<nombre-modulo>/
 #### Paso 1: Generar Aplicación Base
 
 ```bash
-nest g @template/schematics:application payments-service
+nest g -c @template/schematics application payments-service
 cd payments-service
 ```
 
@@ -520,7 +520,7 @@ GROUP_ID="payments-service-group"
 #### Paso 3: Generar Módulo de Pagos
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --crud-mode=stored-proc \
@@ -532,7 +532,7 @@ nest g @template/schematics:hexagonal-module payments \
 #### Paso 4: Generar Módulo de Transacciones
 
 ```bash
-nest g @template/schematics:hexagonal-module transactions \
+nest g -c @template/schematics hexagonal-module transactions \
   --database=oracle \
   --kafka=producer \
   --crud-mode=stored-proc \
@@ -552,13 +552,13 @@ npm run start:dev
 
 ```bash
 # Generar proyecto demo
-nest g @template/schematics:application demo \
+nest g -c @template/schematics application demo \
   --skip-install
 
 cd demo
 
 # Generar módulo de ejemplo con MongoDB
-nest g @template/schematics:hexagonal-module products \
+nest g -c @template/schematics hexagonal-module products \
   --database=mongodb \
   --crud-mode=orm \
   --kafka=producer \
@@ -693,7 +693,7 @@ docker run -p 8080:8080 --env-file .env <nombre-servicio>:latest
 **Solución:**
 ```bash
 # Usar ORM mode con MongoDB
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm
 ```
@@ -723,7 +723,7 @@ cp .env.example .env
 **Solución:**
 ```bash
 # Habilitar Kafka al usar schema registry
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --kafka=producer \
   --schema-registry=confluent
 ```

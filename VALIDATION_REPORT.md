@@ -204,7 +204,7 @@ El schematic `application` implementa:
 ### Opciones del Schematic
 
 ```bash
-nest g @template/schematics:application <name> [options]
+nest g -c @template/schematics application <name> [options]
 
 Opciones:
   --directory <dir>          Directorio donde crear el proyecto
@@ -264,7 +264,7 @@ Opciones:
 ### ✅ Caso 1: Generación de Proyecto Nuevo
 
 ```bash
-nest g @template/schematics:application my-microservice
+nest g -c @template/schematics application my-microservice
 ```
 
 **Resultado:** Proyecto completo generado con nombre `my-microservice`
@@ -272,7 +272,7 @@ nest g @template/schematics:application my-microservice
 ### ✅ Caso 2: Generación sin Instalación
 
 ```bash
-nest g @template/schematics:application my-app --skip-install
+nest g -c @template/schematics application my-app --skip-install
 ```
 
 **Resultado:** Proyecto generado sin ejecutar `npm install`
@@ -315,7 +315,7 @@ npm install -g @template/schematics
 nest new my-microservice --collection=@template/schematics
 
 # O usando el schematic directamente
-nest g @template/schematics:application my-microservice
+nest g -c @template/schematics application my-microservice
 ```
 
 ---

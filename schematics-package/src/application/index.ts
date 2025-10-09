@@ -256,7 +256,7 @@ ${options.projectDirectory}/
     }
 
     context.logger.info(chalk.gray('\n💡 To generate hexagonal modules, use:'));
-    context.logger.info(chalk.gray(`  nest g @template/schematics:hexagonal-module <module-name> --database=<oracle|mssql|mongodb> --kafka=<none|producer|consumer|both>\n`));
+    context.logger.info(chalk.gray(`  nest g -c @template/schematics hexagonal-module <module-name> --database=<oracle|mssql|mongodb> --kafka=<none|producer|consumer|both>\n`));
 
     return tree;
   };

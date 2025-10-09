@@ -48,13 +48,13 @@ Debe mostrar:
 
 ```bash
 # 1. Generar aplicación
-nest g @template/schematics:application demo
+nest g -c @template/schematics application demo
 
 # 2. Navegar al proyecto
 cd demo
 
 # 3. Generar módulo de ejemplo
-nest g @template/schematics:hexagonal-module products \
+nest g -c @template/schematics hexagonal-module products \
   --database=oracle \
   --kafka=producer \
   --path=src/app
@@ -72,7 +72,7 @@ npm run start:dev
 
 ```bash
 # Generar aplicación
-nest g @template/schematics:application my-service
+nest g -c @template/schematics application my-service
 
 # Navegar e instalar
 cd my-service
@@ -147,7 +147,7 @@ Abrir navegador en: `http://localhost:8080/api`
 ### Módulo con Oracle
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --path=src/app
@@ -156,7 +156,7 @@ nest g @template/schematics:hexagonal-module payments \
 ### Módulo con SQL Server
 
 ```bash
-nest g @template/schematics:hexagonal-module orders \
+nest g -c @template/schematics hexagonal-module orders \
   --database=mssql \
   --crud-mode=stored-proc \
   --path=src/app
@@ -165,7 +165,7 @@ nest g @template/schematics:hexagonal-module orders \
 ### Módulo con MongoDB
 
 ```bash
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --path=src/app
@@ -174,7 +174,7 @@ nest g @template/schematics:hexagonal-module users \
 ### Módulo sin Base de Datos
 
 ```bash
-nest g @template/schematics:hexagonal-module external-api \
+nest g -c @template/schematics hexagonal-module external-api \
   --database=none \
   --path=src/app
 ```

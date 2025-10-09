@@ -52,11 +52,11 @@ npm link
 Genera una aplicación NestJS completa con arquitectura hexagonal, infraestructura compartida (Oracle, MSSQL, Kafka, HTTP), configuración de despliegue y tests.
 
 ```bash
-nest g @template/schematics:application <nombre-proyecto> [opciones]
+nest g -c @template/schematics application <nombre-proyecto> [opciones]
 
 # Alias disponibles
-nest g @template/schematics:app <nombre-proyecto>
-nest g @template/schematics:new <nombre-proyecto>
+nest g -c @template/schematics app <nombre-proyecto>
+nest g -c @template/schematics new <nombre-proyecto>
 ```
 
 **Características del proyecto generado:**
@@ -87,10 +87,10 @@ nest g @template/schematics:new <nombre-proyecto>
 
 ```bash
 # Generar aplicación completa
-nest g @template/schematics:application my-microservice
+nest g -c @template/schematics application my-microservice
 
 # Con opciones personalizadas
-nest g @template/schematics:application my-app \
+nest g -c @template/schematics application my-app \
   --package-manager=pnpm \
   --skip-install \
   --directory=apps/my-app
@@ -101,11 +101,11 @@ nest g @template/schematics:application my-app \
 Genera módulos individuales siguiendo arquitectura hexagonal dentro de un proyecto existente.
 
 ```bash
-nest g @template/schematics:hexagonal-module <nombre-modulo> [opciones]
+nest g -c @template/schematics hexagonal-module <nombre-modulo> [opciones]
 
 # Alias disponibles
-nest g @template/schematics:hex-module <nombre-modulo>
-nest g @template/schematics:hm <nombre-modulo>
+nest g -c @template/schematics hex-module <nombre-modulo>
+nest g -c @template/schematics hm <nombre-modulo>
 ```
 
 ---
@@ -116,7 +116,7 @@ nest g @template/schematics:hm <nombre-modulo>
 
 ```bash
 # Crear nuevo microservicio
-nest g @template/schematics:application payments-service
+nest g -c @template/schematics application payments-service
 
 # Navegar al proyecto
 cd payments-service
@@ -135,7 +135,7 @@ npm run start:dev
 ### Generar Módulo con Oracle y Kafka
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --path=src/app
@@ -144,7 +144,7 @@ nest g @template/schematics:hexagonal-module payments \
 ### Generar Módulo con SQL Server (Solo Stored Procedures)
 
 ```bash
-nest g @template/schematics:hexagonal-module orders \
+nest g -c @template/schematics hexagonal-module orders \
   --database=mssql \
   --crud-mode=stored-proc \
   --ops=select,insert,update \
@@ -154,7 +154,7 @@ nest g @template/schematics:hexagonal-module orders \
 ### Generar Módulo con MongoDB
 
 ```bash
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --path=src/app
@@ -163,7 +163,7 @@ nest g @template/schematics:hexagonal-module users \
 ### Dry Run (Preview sin Escribir)
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --dry-run
@@ -307,7 +307,7 @@ src/app/payments/
 ### Ejemplo 1: Módulo de Pagos con Oracle y Kafka
 
 ```bash
-nest g @template/schematics:hexagonal-module payments \
+nest g -c @template/schematics hexagonal-module payments \
   --database=oracle \
   --kafka=both \
   --crud-mode=stored-proc \
@@ -327,7 +327,7 @@ nest g @template/schematics:hexagonal-module payments \
 ### Ejemplo 2: Módulo de Usuarios con MongoDB
 
 ```bash
-nest g @template/schematics:hexagonal-module users \
+nest g -c @template/schematics hexagonal-module users \
   --database=mongodb \
   --crud-mode=orm \
   --kafka=producer \
@@ -343,7 +343,7 @@ nest g @template/schematics:hexagonal-module users \
 ### Ejemplo 3: Módulo Sin Base de Datos (Proxy a API Externa)
 
 ```bash
-nest g @template/schematics:hexagonal-module external-api \
+nest g -c @template/schematics hexagonal-module external-api \
   --database=none \
   --kafka=none \
   --path=src/app
