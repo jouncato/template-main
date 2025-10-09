@@ -43,8 +43,6 @@ npm run build
 npm link
 ```
 
-> **⚠️ Problema con npm link?** Si obtienes el error "Invalid schematic", consulta [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) para soluciones alternativas.
-
 ---
 
 ## 🎯 Schematics Disponibles
