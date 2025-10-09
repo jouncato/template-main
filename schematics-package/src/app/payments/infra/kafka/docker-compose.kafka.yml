@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # Zookeeper - Required for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: <%= dasherize(moduleName) %>-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - <%= dasherize(moduleName) %>-network
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: <%= dasherize(moduleName) %>-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - <%= dasherize(moduleName) %>-network
+<% if (schemaRegistry === 'confluent') { %>
+  # Confluent Schema Registry
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: <%= dasherize(moduleName) %>-schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - <%= dasherize(moduleName) %>-network
+<% } %>
+  # Kafka UI (Optional - for development)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: <%= dasherize(moduleName) %>-kafka-ui
+    depends_on:
+      - kafka
+<% if (schemaRegistry === 'confluent') { %>      - schema-registry
+<% } %>
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: <%= dasherize(moduleName) %>-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
+<% if (schemaRegistry === 'confluent') { %>      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+<% } %>      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - <%= dasherize(moduleName) %>-network
+
+  # Topic Initializer - Creates topics on startup
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: <%= dasherize(moduleName) %>-kafka-init
+    depends_on:
+      - kafka
+    entrypoint: ['/bin/sh', '-c']
+    command: |
+      "
+      # Wait for Kafka to be ready
+      echo 'Waiting for Kafka to be ready...'
+      cub kafka-ready -b kafka:9093 1 60
+
+      # Create topics
+      echo 'Creating topics...'
+      
+      kafka-topics --create --if-not-exists \
+        --bootstrap-server kafka:9093 \
+        --topic <%= dasherize(moduleName) %>.created \
+        --partitions 3 \
+        --replication-factor 1
+
+      kafka-topics --create --if-not-exists \
+        --bootstrap-server kafka:9093 \
+        --topic <%= dasherize(moduleName) %>.updated \
+        --partitions 3 \
+        --replication-factor 1
+
+      kafka-topics --create --if-not-exists \
+        --bootstrap-server kafka:9093 \
+        --topic <%= dasherize(moduleName) %>.deleted \
+        --partitions 3 \
+        --replication-factor 1
+
+<% if (kafka === 'consumer' || kafka === 'both') { %>      kafka-topics --create --if-not-exists \
+        --bootstrap-server kafka:9093 \
+        --topic external.<%= dasherize(moduleName) %>.events \
+        --partitions 3 \
+        --replication-factor 1
+
+      kafka-topics --create --if-not-exists \
+        --bootstrap-server kafka:9093 \
+        --topic <%= dasherize(moduleName) %>.commands \
+        --partitions 3 \
+        --replication-factor 1
+<% } %>
+      echo 'Topics created successfully!'
+      
+      # List all topics
+      kafka-topics --list --bootstrap-server kafka:9093
+      "
+    networks:
+      - <%= dasherize(moduleName) %>-network
+
+networks:
+  <%= dasherize(moduleName) %>-network:
+    driver: bridge

@@ -128,6 +128,32 @@ function validateSchemaRegistry(schemaRegistry: string, kafka: string): void {
   }
 }
 
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Custom string transformation: constantCase
+ * Converts a string to CONSTANT_CASE (e.g., "userManagement" -> "USER_MANAGEMENT")
+ */
+function constantCase(str: string): string {
+  return strings.underscore(str).toUpperCase();
+}
+
+/**
+ * Custom string transformation: uppercase
+ * Converts a string to uppercase
+ */
+function uppercase(str: string): string {
+  return str.toUpperCase();
+}
+
+/**
+ * Custom string transformation: lowercase
+ * Converts a string to lowercase
+ */
+function lowercase(str: string): string {
+  return str.toLowerCase();
+}
+
 // ==================== NORMALIZATION ====================
 
 function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
@@ -158,10 +184,13 @@ function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
   // Normalize paths and names
   const moduleName = strings.dasherize(normalizedOptions.name);
   const moduleClassName = strings.classify(normalizedOptions.name);
-  const basePath = normalizedOptions.path || 'src/app';
+  // Normalize base path first and compose target path using join to respect --path
+  const basePath = normalizedOptions.path
+    ? normalize(normalizedOptions.path)
+    : normalize('src/app');
   const modulePath = normalizedOptions.flat
-    ? normalize(basePath)
-    : normalize(`${basePath}/${moduleName}`);
+    ? basePath
+    : join(basePath, moduleName);
 
   return {
     ...normalizedOptions,
@@ -198,6 +227,10 @@ export function hexagonalModule(options: HexagonalModuleOptions): Rule {
 
     // Generate files from templates
     return chain([
+      // Protect schematic source files from being modified
+      protectSchematicFiles(),
+      // Clean up shared infrastructure according to selected capabilities
+      cleanupSharedInfrastructure(normalizedOptions),
       generateCoreFiles(normalizedOptions),
       generateDomainLayer(normalizedOptions),
       generateApplicationLayer(normalizedOptions),
@@ -234,9 +267,38 @@ function getTemplateContext(options: NormalizedOptions) {
     ...options,
     ...strings,
     name: options.moduleName,  // For __name__ placeholder in file names
+    moduleName: options.moduleName,  // For template interpolation
+    // Standard string transformation functions from @angular-devkit/core
     classify: strings.classify,
     dasherize: strings.dasherize,
     camelize: strings.camelize,
+    underscore: strings.underscore,
+    capitalize: strings.capitalize,
+    decamelize: strings.decamelize,
+    // Custom string transformation functions
+    constantCase: constantCase,
+    uppercase: uppercase,
+    lowercase: lowercase,
+  };
+}
+
+/**
+ * Custom function to rename files with __name__ placeholder to actual module name
+ * This replaces __name__ in file paths with the actual module name
+ */
+function renameFiles(options: NormalizedOptions): Rule {
+  return (tree: Tree) => {
+    tree.visit((path) => {
+      if (path.includes('__name__')) {
+        const newPath = path.replace(/__name__/g, options.moduleName);
+        const content = tree.read(path);
+        if (content) {
+          tree.create(newPath, content);
+          tree.delete(path);
+        }
+      }
+    });
+    return tree;
   };
 }
 
@@ -244,27 +306,145 @@ function generateCoreFiles(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/core'), [
       applyTemplates(getTemplateContext(options)),
+      renameTemplateFiles(),
       move(options.modulePath),
     ])
   );
+}
+
+/**
+ * Protection rule: prevents any modifications to schematic source files
+ * This is critical when running schematics from a monorepo where the schematic package
+ * itself is part of the workspace tree.
+ */
+function protectSchematicFiles(): Rule {
+  return (tree: Tree, context: SchematicContext) => {
+    // Create a snapshot of all schematic source file paths to protect
+    const protectedPaths: string[] = [];
+    
+    tree.visit((path) => {
+      // Protect any file under schematics-package directory
+      if (path.includes('schematics-package/')) {
+        protectedPaths.push(path);
+      }
+    });
+
+    // Override tree methods to prevent modifications to protected paths
+    const originalDelete = tree.delete.bind(tree);
+    const originalCreate = tree.create.bind(tree);
+    const originalOverwrite = tree.overwrite.bind(tree);
+    const originalRename = tree.rename.bind(tree);
+
+    tree.delete = function(path: string) {
+      if (path.includes('schematics-package/')) {
+        context.logger.warn(`⚠️  Blocked attempt to delete protected schematic file: ${path}`);
+        return;
+      }
+      return originalDelete(path);
+    };
+
+    tree.create = function(path: string, content: Buffer | string) {
+      if (path.includes('schematics-package/')) {
+        context.logger.warn(`⚠️  Blocked attempt to create file in protected schematic directory: ${path}`);
+        return tree;
+      }
+      return originalCreate(path, content);
+    };
+
+    tree.overwrite = function(path: string, content: Buffer | string) {
+      if (path.includes('schematics-package/')) {
+        context.logger.warn(`⚠️  Blocked attempt to overwrite protected schematic file: ${path}`);
+        return tree;
+      }
+      return originalOverwrite(path, content);
+    };
+
+    tree.rename = function(from: string, to: string) {
+      if (from.includes('schematics-package/') || to.includes('schematics-package/')) {
+        context.logger.warn(`⚠️  Blocked attempt to rename protected schematic file: ${from} -> ${to}`);
+        return tree;
+      }
+      return originalRename(from, to);
+    };
+
+    return tree;
+  };
+}
+
+/**
+ * Cleanup rule: remove unselected shared infrastructure adapters
+ * - Database adapters: keep only the one selected in options.database (oracle | mssql | mongodb)
+ * - Kafka: remove shared/infrastructure/kafka when options.kafka === 'none'
+ *
+ * The cleanup is idempotent and only affects the specified directories under
+ *   <options.path>/shared/infrastructure
+ */
+function cleanupSharedInfrastructure(options: NormalizedOptions): Rule {
+  return (tree: Tree, context: SchematicContext) => {
+    // Compute shared infrastructure base path relative to provided --path
+    const pathBase = options.path ? normalize(options.path) : normalize('src/app');
+    const sharedInfraBase = join(pathBase, 'shared', 'infrastructure');
+
+    // Database adapters cleanup
+    const dbAdapters = ['oracle', 'mssql', 'mongodb'] as const;
+    dbAdapters.forEach((adapter) => {
+      if (options.database !== adapter) {
+        const toDelete = join(sharedInfraBase, adapter);
+        if (tree.exists(toDelete)) {
+          tree.delete(toDelete);
+        }
+      }
+    });
+
+    // Kafka cleanup: remove only when kafka === 'none'
+    if (options.kafka === 'none') {
+      const kafkaDir = join(sharedInfraBase, 'kafka');
+      if (tree.exists(kafkaDir)) {
+        tree.delete(kafkaDir);
+      }
+    }
+
+    return tree;
+  };
 }
 
 function generateDomainLayer(options: NormalizedOptions): Rule {
   return mergeWith(
     apply(url('./files/domain'), [
       applyTemplates(getTemplateContext(options)),
+      renameTemplateFiles(),
       move(`${options.modulePath}/domain`),
     ])
   );
 }
 
 function generateApplicationLayer(options: NormalizedOptions): Rule {
-  return mergeWith(
-    apply(url('./files/application'), [
-      applyTemplates(getTemplateContext(options)),
-      move(`${options.modulePath}/application`),
-    ])
-  );
+  return chain([
+    // Use cases and DTOs
+    mergeWith(
+      apply(url('./files/application/usecases'), [
+        applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
+        move(`${options.modulePath}/application/usecases`),
+      ])
+    ),
+    mergeWith(
+      apply(url('./files/application/dtos'), [
+        applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
+        move(`${options.modulePath}/application/dtos`),
+      ])
+    ),
+
+    // Health check (ALWAYS generated - not optional)
+    mergeWith(
+      apply(url('./files/application/health'), [
+        applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
+        move(`${options.modulePath}/application/health`),
+      ])
+    ),
+  ]);
 }
 
 function generateAdapters(options: NormalizedOptions): Rule {
@@ -273,6 +453,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
     mergeWith(
       apply(url('./files/adapters/inbound'), [
         applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
         move(`${options.modulePath}/adapters/inbound`),
       ])
     ),
@@ -282,6 +463,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
       ? mergeWith(
           apply(url(`./files/adapters/outbound/db/${options.database}`), [
             applyTemplates(getTemplateContext(options)),
+            renameTemplateFiles(),
             move(`${options.modulePath}/adapters/outbound/db`),
           ])
         )
@@ -292,6 +474,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
       ? mergeWith(
           apply(url('./files/adapters/outbound/kafka'), [
             applyTemplates(getTemplateContext(options)),
+            renameTemplateFiles(),
             filter(path => {
               if (options.kafka === 'producer' && path.includes('consumer')) return false;
               if (options.kafka === 'consumer' && path.includes('producer')) return false;
@@ -307,6 +490,7 @@ function generateAdapters(options: NormalizedOptions): Rule {
       ? mergeWith(
           apply(url(`./files/adapters/auth/${options.auth}`), [
             applyTemplates(getTemplateContext(options)),
+            renameTemplateFiles(),
             move(`${options.modulePath}/adapters/auth`),
           ])
         )
@@ -321,6 +505,7 @@ function generateInfrastructure(options: NormalizedOptions): Rule {
       ? mergeWith(
           apply(url(`./files/infra/db/${options.database}`), [
             applyTemplates(getTemplateContext(options)),
+            renameTemplateFiles(),
             move(`${options.modulePath}/infra/db`),
           ])
         )
@@ -331,6 +516,7 @@ function generateInfrastructure(options: NormalizedOptions): Rule {
       ? mergeWith(
           apply(url('./files/infra/kafka'), [
             applyTemplates(getTemplateContext(options)),
+            renameTemplateFiles(),
             move(`${options.modulePath}/infra/kafka`),
           ])
         )
@@ -348,6 +534,7 @@ function generateTests(options: NormalizedOptions): Rule {
     mergeWith(
       apply(url('./files/tests/unit'), [
         applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
         move(`${options.modulePath}/tests/unit`),
       ])
     ),
@@ -356,6 +543,7 @@ function generateTests(options: NormalizedOptions): Rule {
     mergeWith(
       apply(url('./files/tests/integration'), [
         applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
         filter(path => {
           if (options.database === 'none' && path.includes('repository')) return false;
           if (options.kafka === 'none' && path.includes('kafka')) return false;
@@ -369,6 +557,7 @@ function generateTests(options: NormalizedOptions): Rule {
     mergeWith(
       apply(url('./files/tests/e2e'), [
         applyTemplates(getTemplateContext(options)),
+        renameTemplateFiles(),
         move(`${options.modulePath}/tests/e2e`),
       ])
     ),
@@ -376,15 +565,19 @@ function generateTests(options: NormalizedOptions): Rule {
 }
 
 function generateDocumentation(options: NormalizedOptions): Rule {
-  return mergeWith(
-    apply(url('./files/docs'), [
-      applyTemplates({
-        ...getTemplateContext(options),
-        timestamp: new Date().toISOString(),
-      }),
-      move(options.modulePath),
-    ])
-  );
+  // TODO: Create docs templates directory and implement documentation generation
+  return noop();
+
+  // return mergeWith(
+  //   apply(url('./files/docs'), [
+  //     applyTemplates({
+  //       ...getTemplateContext(options),
+  //       timestamp: new Date().toISOString(),
+  //     }),
+  //     renameTemplateFiles(),
+  //     move(options.modulePath),
+  //   ])
+  // );
 }
 
 function logSuccess(options: NormalizedOptions): Rule {

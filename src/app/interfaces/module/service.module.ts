@@ -12,14 +12,14 @@ import { AppController } from '../controller/app.controller';
  */
 @Module({
   imports: [
-    // HealthModule,
-    // SqlModule
-    // OracleModule
+     HealthModule,
+     SqlModule
+     OracleModule
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // DatabaseService
+    DatabaseService
   ],
 })
 export class ServiceModule {}

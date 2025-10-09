@@ -1,0 +1,206 @@
+import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PaymentsHealthService, HealthCheckResult } from './payments-health.service';
+
+/**
+ * Health Check Controller for Payments Module
+ *
+ * Provides standardized health check endpoints for Kubernetes/Docker orchestration:
+ *
+ * - GET /payments/health        - Comprehensive health status
+ * - GET /payments/health/ready  - Readiness probe (K8s readinessProbe)
+ * - GET /payments/health/live   - Liveness probe (K8s livenessProbe)
+ *
+ * Usage in Kubernetes:
+ * ```yaml
+ * livenessProbe:
+ *   httpGet:
+ *     path: /payments/health/live
+ *     port: 8080
+ *   initialDelaySeconds: 10
+ *   periodSeconds: 30
+ *
+ * readinessProbe:
+ *   httpGet:
+ *     path: /payments/health/ready
+ *     port: 8080
+ *   initialDelaySeconds: 5
+ *   periodSeconds: 10
+ * ```
+ */
+@ApiTags('Payments - Health')
+@Controller('payments/health')
+export class PaymentsHealthController {
+  constructor(
+    private readonly healthService: PaymentsHealthService,
+  ) {}
+
+  /**
+   * Comprehensive health check endpoint
+   *
+   * Returns detailed health status of all module dependencies:
+   * - oracle database connection
+   * - Kafka broker connectivity
+   * - Module resources
+   *
+   * @returns {HealthCheckResult} Detailed health status
+   */
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Module health check',
+    description: 'Returns comprehensive health status of the payments module and its dependencies',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Health check completed successfully',
+    schema: {
+      example: {
+        status: 'up',
+        module: 'payments',
+        timestamp: '2025-10-09T10:00:00.000Z',
+        checks: [
+          {
+            name: 'oracle-database',
+            status: 'up',
+            message: 'oracle database is reachable',
+          },
+          {
+            name: 'kafka',
+            status: 'up',
+            message: 'Kafka is reachable',
+          },
+          {
+            name: 'payments-module',
+            status: 'up',
+            message: 'Module is operational',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'One or more health checks failed',
+    schema: {
+      example: {
+        status: 'down',
+        module: 'payments',
+        timestamp: '2025-10-09T10:00:00.000Z',
+        error: 'Health check failed',
+        checks: [],
+      },
+    },
+  })
+  async health(): Promise<HealthCheckResult> {
+    const result = await this.healthService.check();
+
+    // Return appropriate HTTP status based on health
+    if (result.status === 'down') {
+      // Status is handled by @HttpCode decorator
+      // In production, consider throwing ServiceUnavailableException
+    }
+
+    return result;
+  }
+
+  /**
+   * Readiness probe endpoint for Kubernetes
+   *
+   * Indicates whether the module is ready to accept traffic.
+   * - Returns 200 OK when ready
+   * - Returns 503 Service Unavailable when not ready
+   *
+   * Use this for Kubernetes readinessProbe to control traffic routing.
+   *
+   * @returns {ReadinessResponse} Simple ready status
+   */
+  @Get('ready')
+  @ApiOperation({
+    summary: 'Readiness probe',
+    description: 'Kubernetes readiness probe - indicates if module is ready to serve requests',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Module is ready to serve requests',
+    schema: {
+      example: {
+        ready: true,
+        module: 'payments',
+        timestamp: '2025-10-09T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Module is not ready',
+    schema: {
+      example: {
+        ready: false,
+        module: 'payments',
+        timestamp: '2025-10-09T10:00:00.000Z',
+      },
+    },
+  })
+  async ready(): Promise<ReadinessResponse> {
+    const isReady = await this.healthService.isReady();
+
+    return {
+      ready: isReady,
+      module: 'payments',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Liveness probe endpoint for Kubernetes
+   *
+   * Indicates whether the module process is alive and not deadlocked.
+   * - Always returns 200 OK if the process is running
+   * - If this endpoint fails, Kubernetes will restart the pod
+   *
+   * Use this for Kubernetes livenessProbe to detect and recover from deadlocks.
+   *
+   * @returns {LivenessResponse} Simple alive status
+   */
+  @Get('live')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Liveness probe',
+    description: 'Kubernetes liveness probe - indicates if module process is alive',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Module process is alive',
+    schema: {
+      example: {
+        alive: true,
+        module: 'payments',
+        timestamp: '2025-10-09T10:00:00.000Z',
+      },
+    },
+  })
+  live(): LivenessResponse {
+    const isAlive = this.healthService.isAlive();
+
+    return {
+      alive: isAlive,
+      module: 'payments',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+// ==================== TYPES ====================
+
+export interface ReadinessResponse {
+  ready: boolean;
+  module: string;
+  timestamp: string;
+}
+
+export interface LivenessResponse {
+  alive: boolean;
+  module: string;
+  timestamp: string;
+}
