@@ -67,6 +67,8 @@ npm run build
 npm link
 ```
 
+> **⚠️ Si obtienes error "Invalid schematic"**: Usa el menú interactivo (paso 2) o consulta [schematics-package/TROUBLESHOOTING.md](./schematics-package/TROUBLESHOOTING.md)
+
 ### 2. Usar el Menú Interactivo 🎮 (Recomendado)
 
 ```bash

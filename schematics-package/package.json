@@ -27,6 +27,7 @@
     "copy:assets": "node scripts/copy-assets.js",
     "menu": "node scripts/interactive-menu.js",
     "generate": "node scripts/interactive-menu.js",
+    "generate:local": "node scripts/generate-local.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
