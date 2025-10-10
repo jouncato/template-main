@@ -1,4 +1,4 @@
-import { Injectable, Inject<% if (database === 'mssql') { %>, Logger<% } %> } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 <% if (database === 'mssql') { %>import * as sql from 'mssql';<% } %>
 <% if (database === 'oracle') { %>import { ConfigType } from '@nestjs/config';
 import config from '@share/domain/resources/env.config';
@@ -22,8 +22,6 @@ import { Logger20Service } from '@share/domain/config/logger/logger20.service';
  */
 @Injectable()
 export class <%= classify(moduleName) %>HealthService {
-  <% if (database === 'mssql') { %>private readonly logger = new Logger(<%= classify(moduleName) %>HealthService.name);
-  <% } %>
   constructor(
 <% if (database === 'mssql') { %>    @Inject('SQL_CONNECTION')
     private readonly pool: sql.ConnectionPool,
@@ -92,8 +90,8 @@ export class <%= classify(moduleName) %>HealthService {
           status: 'up',
           message: 'Database is connected and responsive',
           details: {
-            server: this.pool.config.server,
-            database: this.pool.config.database,
+            server: this.pool.pool.config.server,
+            database: this.pool.pool.config.database,
           },
         };
       } else {

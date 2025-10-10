@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
-import { AppService } from '@src/app/application/app.service';
-import { IAppService } from '@src/app/domain/interfaces/IAppService';
+import { AppService } from '../../../app/application/app.service';
+import { IAppService } from '../../../app/domain/interfaces/IAppService';
 
 import { ApmService } from '../../domain/config/apm/apm.service';
 

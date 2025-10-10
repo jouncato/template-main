@@ -17,8 +17,8 @@ import {
 } from 'kafkajs';
 import pLimit from 'p-limit';
 
-import { AppRequest } from '@src/app/domain/dto/appRequest.dto';
-import { IAppService } from '@src/app/domain/interfaces/IAppService';
+import { AppRequest } from '../../../app/domain/dto/appRequest.dto';
+import { IAppService } from '../../../app/domain/interfaces/IAppService';
 
 import { ApmService } from '../../domain/config/apm/apm.service';
 import { runWithTx } from '../../domain/config/txid/als';

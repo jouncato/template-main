@@ -4,9 +4,8 @@ import * as sql from 'mssql';
 import { SqlServerService } from '@share/infrastructure/mssql/sqlserver.service';
 import { Logger20Service } from '@share/domain/config/logger/logger20.service';
 
-import { <%= classify(moduleName) %>Entity } from '../../../../domain/entities/<%= dasherize(moduleName) %>.entity';
-import { I<%= classify(moduleName) %>Repository, PaginationOptions, PaginatedResult } from '../../../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';
-import { MssqlStoredProcMapper } from './stored-proc-mapper.util';
+import { <%= classify(moduleName) %>Entity } from '../../../domain/entities/<%= dasherize(moduleName) %>.entity';
+import { I<%= classify(moduleName) %>Repository, PaginationOptions, PaginatedResult } from '../../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';
 
 /**
  * MSSQL Repository Adapter for <%= classify(moduleName) %>
@@ -212,13 +211,13 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
         Id: { type: sql.NVarChar(50), value: entity.id },
         Name: { type: sql.NVarChar(255), value: entity.name },
         Status: { type: sql.NVarChar(50), value: entity.status },
-        CreatedAt: { type: sql.DateTime2, value: entity.createdAt },
-        UpdatedAt: { type: sql.DateTime2, value: entity.updatedAt },
+        CreatedAt: { type: sql.DateTime2(), value: entity.createdAt },
+        UpdatedAt: { type: sql.DateTime2(), value: entity.updatedAt },
       };
 
       // Output parameter for operation result
       const outputParams = {
-        Result: sql.Int,
+        Result: sql.Int(),
       };
 
       // Execute stored procedure
@@ -267,11 +266,11 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
         Id: { type: sql.NVarChar(50), value: entity.id },
         Name: { type: sql.NVarChar(255), value: entity.name },
         Status: { type: sql.NVarChar(50), value: entity.status },
-        UpdatedAt: { type: sql.DateTime2, value: entity.updatedAt },
+        UpdatedAt: { type: sql.DateTime2(), value: entity.updatedAt },
       };
 
       const outputParams = {
-        AffectedRows: sql.Int,
+        AffectedRows: sql.Int(),
       };
 
       const result = await this.sqlServerService.executeProcedure<any>(
@@ -315,7 +314,7 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
       };
 
       const outputParams = {
-        AffectedRows: sql.Int,
+        AffectedRows: sql.Int(),
       };
 
       const result = await this.sqlServerService.executeProcedure<any>(
@@ -355,7 +354,7 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
       };
 
       const outputParams = {
-        Exists: sql.Bit,
+        Exists: sql.Bit(),
       };
 
       const result = await this.sqlServerService.executeProcedure<any>(
@@ -381,7 +380,7 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
   async count(): Promise<number> {
     try {
       const outputParams = {
-        TotalCount: sql.Int,
+        TotalCount: sql.Int(),
       };
 
       const result = await this.sqlServerService.executeProcedure<any>(
@@ -416,14 +415,14 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
       this.logger.log(`Finding <%= moduleName %> entities with pagination: page=${options.page}, limit=${options.limit}`);
 
       const inputParams = {
-        Page: { type: sql.Int, value: options.page },
-        Limit: { type: sql.Int, value: options.limit },
+        Page: { type: sql.Int(), value: options.page },
+        Limit: { type: sql.Int(), value: options.limit },
         SortField: { type: sql.NVarChar(50), value: options.sort?.field || 'CreatedAt' },
         SortDirection: { type: sql.NVarChar(4), value: options.sort?.direction || 'DESC' },
       };
 
       const outputParams = {
-        TotalCount: sql.Int,
+        TotalCount: sql.Int(),
       };
 
       const result = await this.sqlServerService.executeProcedure<any>(

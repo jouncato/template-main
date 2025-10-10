@@ -180,8 +180,8 @@ export class <%= classify(name) %>HealthController {
       },
     },
   })
-  live(): LivenessResponse {
-    const isAlive = this.healthService.isAlive();
+  async live(): Promise<LivenessResponse> {
+    const isAlive = await this.healthService.isAlive();
 
     return {
       alive: isAlive,
