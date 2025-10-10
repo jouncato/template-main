@@ -252,7 +252,34 @@ export class <%= classify(moduleName) %>HealthService {
       };
     }
   }
-<% } %>}
+<% } %>
+  /**
+   * Check if the service is ready to accept traffic
+   * @returns true if all critical dependencies are healthy
+   */
+  async isReady(): Promise<boolean> {
+    try {
+      const healthResponse = await this.check();
+      return healthResponse.status === 'ok';
+    } catch (error) {
+      this.logger.error('Ready check failed', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if the service is alive (basic liveness probe)
+   * @returns true if service can respond to requests
+   */
+  async isAlive(): Promise<boolean> {
+    try {
+      return true;
+    } catch (error) {
+      this.logger.error('Liveness check failed', error as Error);
+      return false;
+    }
+  }
+}
 
 /**
  * Health check response structure

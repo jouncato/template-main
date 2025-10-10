@@ -116,25 +116,28 @@ export class Delete<%= classify(moduleName) %>UseCase {
         await this.repository.hardDelete(id);
         this.logger.log(`<%= classify(moduleName) %> hard deleted successfully: ${id}`);
       } else {
-        // Soft delete: Mark as inactive but keep the data
-        existingEntity.isActive = false;
-        existingEntity.updatedAt = new Date();
-        // Optional: Add deletedAt timestamp
-        // existingEntity.deletedAt = new Date();
+        // Soft delete: Mark as inactive but keep the data using immutable update
+        const deactivatedEntity = existingEntity.deactivate();
 
-        await this.repository.update(id, existingEntity);
+        await this.repository.update(deactivatedEntity);
         this.logger.log(`<%= classify(moduleName) %> soft deleted successfully: ${id}`);
       }
 
 <% } %><% if (kafka === 'producer' || kafka === 'both') { %>      // Step 4: Publish domain event for eventual consistency
       // Other bounded contexts can react to this deletion
       // For example, clean up related data, update caches, send notifications
-      await this.eventPublisher.publish<%= classify(moduleName) %>DeletedEvent({
-        id: id,
-        deletionType: hardDelete ? 'hard' : 'soft',
-        occurredAt: new Date(),
-        // TODO: Add additional event payload data
-        // Consider including reason for deletion, who initiated it, etc.
+      await this.eventPublisher.publishDeleted({
+        eventId: crypto.randomUUID(),
+        eventType: '<%= dasherize(moduleName) %>.deleted',
+        version: '1.0',
+        timestamp: new Date(),
+        data: {
+          id: id,
+          name: existingEntity.name,
+          status: existingEntity.status,
+          deletionType: hardDelete ? 'hard' : 'soft'
+        },
+        deletionType: hardDelete ? 'hard' : 'soft'
       });
 
 <% } %>      // Step 5: Success - no return value needed for delete operations

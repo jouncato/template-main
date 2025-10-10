@@ -4,8 +4,8 @@ import * as oracledb from 'oracledb';
 import { OracleService } from '@share/infrastructure/oracle/oracle.service';
 import { Logger20Service } from '@share/domain/config/logger/logger20.service';
 
-import { <%= classify(moduleName) %>Entity } from '../../../../domain/entities/<%= dasherize(moduleName) %>.entity';
-import { I<%= classify(moduleName) %>Repository, PaginationOptions, PaginatedResult } from '../../../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';
+import { <%= classify(moduleName) %>Entity } from '../../../domain/entities/<%= dasherize(moduleName) %>.entity';
+import { I<%= classify(moduleName) %>Repository, PaginationOptions, PaginatedResult } from '../../../domain/ports/i-<%= dasherize(moduleName) %>-repository.port';
 import { OracleStoredProcMapper } from './stored-proc-mapper.util';
 
 /**

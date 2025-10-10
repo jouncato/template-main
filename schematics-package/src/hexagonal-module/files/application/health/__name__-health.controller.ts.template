@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { <%= classify(name) %>HealthService, HealthCheckResult } from './<%= dasherize(name) %>-health.service';
+import { <%= classify(moduleName) %>HealthService, HealthCheckResponse } from './<%= dasherize(moduleName) %>-health.service';
 
 /**
  * Health Check Controller for <%= classify(name) %> Module
@@ -43,7 +43,7 @@ export class <%= classify(name) %>HealthController {
    * <% if (kafka !== 'none') { %>- Kafka broker connectivity<% } %>
    * - Module resources
    *
-   * @returns {HealthCheckResult} Detailed health status
+   * @returns {HealthCheckResponse} Detailed health status
    */
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -92,11 +92,11 @@ export class <%= classify(name) %>HealthController {
       },
     },
   })
-  async health(): Promise<HealthCheckResult> {
+  async health(): Promise<HealthCheckResponse> {
     const result = await this.healthService.check();
 
     // Return appropriate HTTP status based on health
-    if (result.status === 'down') {
+    if (result.status === 'error') {
       // Status is handled by @HttpCode decorator
       // In production, consider throwing ServiceUnavailableException
     }

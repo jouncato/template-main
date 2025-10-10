@@ -98,48 +98,48 @@ export class Update<%= classify(moduleName) %>UseCase {
       // The domain service ensures that the update doesn't violate domain invariants
       await this.domainService.validateForUpdate(existingEntity, dto);
 
-      // Step 3: Apply changes to the domain entity
-      // Only update fields that are provided in the DTO (partial update)
+      // Step 3: Apply changes to the domain entity using immutable update
+      // Use the entity's update method to maintain immutability
+      const updateData: any = {};
+      
       if (dto.name !== undefined) {
-        existingEntity.name = dto.name;
+        updateData.name = dto.name;
       }
 
       if (dto.description !== undefined) {
-        existingEntity.description = dto.description;
+        updateData.description = dto.description;
       }
 
       if (dto.isActive !== undefined) {
-        existingEntity.isActive = dto.isActive;
+        updateData.status = dto.isActive ? 'ACTIVE' : 'INACTIVE';
       }
 
-      // TODO: Update additional properties from your DTO
-      // Always use !== undefined to allow explicitly setting values to null/false
-
-      // Update the timestamp
-      existingEntity.updatedAt = new Date();
+      const updatedEntity = existingEntity.update(updateData);
 
       // Step 4: Persist the updated entity through the repository port
-      const updatedEntity = await this.repository.update(id, existingEntity);
+      const savedEntity = await this.repository.update(updatedEntity);
 
-      this.logger.log(`<%= classify(moduleName) %> updated successfully: ${updatedEntity.id}`);
+      this.logger.log(`<%= classify(moduleName) %> updated successfully: ${savedEntity.id}`);
 
 <% } %><% if (kafka === 'producer' || kafka === 'both') { %>      // Step 5: Publish domain event for eventual consistency
       // Other bounded contexts can react to this update
-      await this.eventPublisher.publish<%= classify(moduleName) %>UpdatedEvent({
-        id: <% if (database !== 'none') { %>updatedEntity<% } else { %>id<% } %>.id,
-        changes: dto,
-        occurredAt: new Date(),
-        // TODO: Add additional event payload data
-        // Consider including what changed, previous values, etc.
+      await this.eventPublisher.publishUpdated({
+        eventId: crypto.randomUUID(),
+        eventType: '<%= dasherize(moduleName) %>.updated',
+        version: '1.0',
+        timestamp: new Date(),
+        data: {
+          id: <% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>.id,
+          name: <% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>.name,
+          status: <% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>.status,
+          description: <% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>.description,
+          updatedAt: <% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>.updatedAt
+        },
+        changedFields: Object.keys(updateData)
       });
 
 <% } %>      // Step 6: Transform domain entity to response DTO
-      return <%= classify(moduleName) %>ResponseDto.fromEntity(<% if (database !== 'none') { %>updatedEntity<% } else { %>{
-        id,
-        ...dto,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any<% } %>);
+      return <%= classify(moduleName) %>ResponseDto.fromEntity(<% if (database !== 'none') { %>savedEntity<% } else { %>updatedEntity<% } %>);
     } catch (error) {
 <% if (database !== 'none') { %>      this.logger.error(
         `Failed to update <%= dasherize(moduleName) %> with ID ${id}: ${error.message}`,

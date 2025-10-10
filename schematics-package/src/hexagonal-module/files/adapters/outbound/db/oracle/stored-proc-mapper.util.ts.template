@@ -1,0 +1,200 @@
+import * as oracledb from 'oracledb';
+import { <%= classify(moduleName) %>Entity } from '../../../domain/entities/<%= dasherize(moduleName) %>.entity';
+
+/**
+ * Oracle Stored Procedure Parameter Mapper Utility
+ *
+ * This utility class provides helper methods for mapping between TypeScript values
+ * and Oracle parameter types when working with stored procedures.
+ *
+ * Key Responsibilities:
+ * - Convert TypeScript values to Oracle input parameters
+ * - Define Oracle output parameters with appropriate types
+ * - Map cursor results to TypeScript objects
+ * - Handle NULL values and optional fields
+ * - Manage date/time conversions
+ * - Type-safe parameter construction
+ *
+ * Oracle Type Mapping:
+ * - string -> VARCHAR2, NVARCHAR2
+ * - number (integer) -> NUMBER(precision)
+ * - number (decimal) -> NUMBER(precision, scale)
+ * - boolean -> NUMBER(1) (0/1)
+ * - Date -> DATE, TIMESTAMP
+ * - Buffer -> RAW, BLOB
+ * - null/undefined -> NULL
+ *
+ * Usage Example:
+ * ```typescript
+ * const insertParams = OracleStoredProcMapper.toInsertParams(entity);
+ * const result = await connection.execute(procedureName, insertParams);
+ * const entity = OracleStoredProcMapper.fromDbResult(result.rows[0]);
+ * ```
+ *
+ * @see https://oracle.github.io/node-oracledb/doc/api.html#bind
+ */
+export class OracleStoredProcMapper {
+  /**
+   * Convert a domain entity to Oracle stored procedure input parameters for INSERT operations
+   *
+   * @param entity - The <%= classify(moduleName) %> entity to convert
+   * @returns Oracle bind parameters object for stored procedure calls
+   */
+  static toInsertParams(entity: <%= classify(moduleName) %>Entity): oracledb.BindParameters {
+    return {
+      p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.id },
+      p_name: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.name },
+      p_status: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.status },
+      p_description: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.description || null },
+      p_created_at: { dir: oracledb.BIND_IN, type: oracledb.DATE, val: entity.createdAt },
+      p_updated_at: { dir: oracledb.BIND_IN, type: oracledb.DATE, val: entity.updatedAt },
+    };
+  }
+
+  /**
+   * Convert a domain entity to Oracle stored procedure input parameters for UPDATE operations
+   *
+   * @param entity - The <%= classify(moduleName) %> entity to convert
+   * @returns Oracle bind parameters object for stored procedure calls
+   */
+  static toUpdateParamsFromEntity(entity: <%= classify(moduleName) %>Entity): oracledb.BindParameters {
+    return {
+      p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.id },
+      p_name: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.name },
+      p_status: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.status },
+      p_description: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.description || null },
+      p_updated_at: { dir: oracledb.BIND_IN, type: oracledb.DATE, val: entity.updatedAt },
+    };
+  }
+
+  /**
+   * Convert stored procedure parameters to Oracle bind parameters
+   *
+   * @param params - Object with parameter names and values
+   * @returns Oracle bind parameters object
+   */
+  static toStoredProcParams(params: Record<string, any>): oracledb.BindParameters {
+    const bindParams: oracledb.BindParameters = {};
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value === null || value === undefined) {
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.STRING, val: null };
+      } else if (typeof value === 'string') {
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.STRING, val: value };
+      } else if (typeof value === 'number') {
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.NUMBER, val: value };
+      } else if (typeof value === 'boolean') {
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.NUMBER, val: value ? 1 : 0 };
+      } else if (value instanceof Date) {
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.DATE, val: value };
+      } else {
+        // Default to string for complex types
+        bindParams[key] = { dir: oracledb.BIND_IN, type: oracledb.STRING, val: String(value) };
+      }
+    }
+
+    return bindParams;
+  }
+
+  /**
+   * Convert Oracle database result row to domain entity
+   *
+   * @param dbResult - Raw database result row from Oracle
+   * @returns Reconstituted domain entity
+   */
+  static fromDbResult(dbResult: StoredProcResult): <%= classify(moduleName) %>Entity {
+    return <%= classify(moduleName) %>Entity.reconstitute({
+      id: dbResult.id || dbResult.ID,
+      name: dbResult.name || dbResult.NAME,
+      status: dbResult.status || dbResult.STATUS,
+      description: dbResult.description || dbResult.DESCRIPTION,
+      createdAt: new Date(dbResult.created_at || dbResult.CREATED_AT),
+      updatedAt: new Date(dbResult.updated_at || dbResult.UPDATED_AT),
+    });
+  }
+
+  /**
+   * Create standard OUTPUT parameters for Oracle stored procedures
+   *
+   * @returns Standard OUTPUT bind parameters
+   */
+  static createOutputParams(): oracledb.BindParameters {
+    return {
+      p_result: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      p_affected_rows: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      p_error_message: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+    };
+  }
+
+  /**
+   * Safely extract value from Oracle result considering both uppercase and lowercase column names
+   *
+   * @param result - Oracle query result
+   * @param columnName - Column name to extract (case-insensitive)
+   * @returns Extracted value or null
+   */
+  static safeExtract(result: any, columnName: string): any {
+    if (!result) return null;
+    
+    // Try lowercase first, then uppercase (Oracle commonly returns uppercase)
+    return result[columnName.toLowerCase()] ?? 
+           result[columnName.toUpperCase()] ?? 
+           null;
+  }
+
+  /**
+   * Convert Oracle boolean representation (NUMBER 0/1) to TypeScript boolean
+   *
+   * @param oracleValue - Oracle NUMBER value (0 or 1)
+   * @returns TypeScript boolean
+   */
+  static oracleBooleanToJs(oracleValue: number | null | undefined): boolean {
+    return oracleValue === 1;
+  }
+
+  /**
+   * Convert TypeScript boolean to Oracle NUMBER representation
+   *
+   * @param jsBoolean - TypeScript boolean value
+   * @returns Oracle NUMBER (0 or 1)
+   */
+  static jsBooleanToOracle(jsBoolean: boolean): number {
+    return jsBoolean ? 1 : 0;
+  }
+}
+
+/**
+ * Type definition for Oracle stored procedure result rows
+ * This interface represents the raw data structure returned from Oracle
+ */
+export interface StoredProcResult {
+  id?: string;
+  ID?: string;
+  name?: string;
+  NAME?: string;
+  status?: string;
+  STATUS?: string;
+  description?: string;
+  DESCRIPTION?: string;
+  created_at?: Date | string;
+  CREATED_AT?: Date | string;
+  updated_at?: Date | string;
+  UPDATED_AT?: Date | string;
+  // Add other potential Oracle column variations
+  [key: string]: any;
+}
+
+/**
+ * Type definition for Oracle stored procedure execution result
+ */
+export interface OracleExecutionResult {
+  outBinds?: {
+    p_result?: number;
+    p_affected_rows?: number;
+    p_cursor?: any[];
+    p_error_message?: string;
+    [key: string]: any;
+  };
+  rowsAffected?: number;
+}

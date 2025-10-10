@@ -88,10 +88,10 @@ export class Create<%= classify(moduleName) %>UseCase {
 <% } %>      // Step 2: Create the domain entity
       // The entity encapsulates domain logic and invariants
       const entity = <%= classify(moduleName) %>Entity.create({
+        id: crypto.randomUUID(),
         name: dto.name,
         description: dto.description,
-        isActive: dto.isActive ?? true,
-        // TODO: Add additional properties from your DTO
+        status: dto.isActive === false ? 'INACTIVE' : 'ACTIVE'
       });
 
 <% if (database !== 'none') { %>      // Step 3: Persist the entity through the repository port
@@ -102,11 +102,19 @@ export class Create<%= classify(moduleName) %>UseCase {
 
 <% } %><% if (kafka === 'producer' || kafka === 'both') { %>      // Step 4: Publish domain event for eventual consistency
       // Other bounded contexts can react to this event
-      await this.eventPublisher.publish<%= classify(moduleName) %>CreatedEvent({
-        id: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.id,
-        name: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.name,
-        occurredAt: new Date(),
-        // TODO: Add additional event payload data
+      await this.eventPublisher.publishCreated({
+        eventId: crypto.randomUUID(),
+        eventType: '<%= dasherize(moduleName) %>.created',
+        version: '1.0',
+        timestamp: new Date(),
+        data: {
+          id: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.id,
+          name: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.name,
+          status: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.status,
+          description: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.description,
+          createdAt: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.createdAt,
+          updatedAt: <% if (database !== 'none') { %>savedEntity<% } else { %>entity<% } %>.updatedAt
+        }
       });
 
 <% } %>      // Step 5: Transform domain entity to response DTO

@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaService } from '@share/infrastructure/kafka/kafka.service';
-import { I<%= classify(moduleName) %>EventPublisher } from '../../../domain/ports/i-<%= dasherize(moduleName) %>-event-publisher.port';
+import { 
+  I<%= classify(moduleName) %>EventPublisher,
+  <%= classify(moduleName) %>CreatedEvent,
+  <%= classify(moduleName) %>UpdatedEvent,
+  <%= classify(moduleName) %>DeletedEvent,
+  <%= classify(moduleName) %>StatusChangedEvent,
+  <%= classify(moduleName) %>CustomEvent
+} from '../../../domain/ports/i-<%= dasherize(moduleName) %>-event-publisher.port';
 
 /**
  * <%= classify(moduleName) %> Event Publisher Adapter (Outbound Kafka Producer)
@@ -34,151 +41,135 @@ export class <%= classify(moduleName) %>EventPublisherAdapter implements I<%= cl
 
   constructor(private readonly kafkaService: KafkaService) {}
 
-  /**
-   * Publish <%= classify(moduleName) %> Created Event
-   *
-   * @param event - The event payload containing created entity data
-   */
-  async publish<%= classify(moduleName) %>CreatedEvent(event: {
-    id: string;
-    name: string;
-    occurredAt: Date;
-    [key: string]: any;
-  }): Promise<void> {
+  async publishCreated(event: <%= classify(moduleName) %>CreatedEvent): Promise<void> {
     const topic = `${this.topicPrefix}.created`;
     
     try {
       this.logger.log(`Publishing <%= classify(moduleName) %>CreatedEvent to topic: ${topic}`);
 
-      await this.kafkaService.publish({
+      await this.kafkaService.publishMessage({
         topic,
-        messages: [
-          {
-            key: event.id,
-            value: JSON.stringify({
-              eventType: '<%= classify(moduleName) %>Created',
-              eventVersion: '1.0',
-              occurredAt: event.occurredAt.toISOString(),
-              payload: {
-                id: event.id,
-                name: event.name,
-                // TODO: Add additional event payload fields
-              },
-            }),
-            headers: {
-              'event-type': '<%= classify(moduleName) %>Created',
-              'event-version': '1.0',
-              'correlation-id': event.id,
-            },
-          },
-        ],
+        key: event.data.id,
+        value: JSON.stringify(event),
+        headers: {
+          'event-type': event.eventType,
+          'event-version': event.version,
+          'correlation-id': event.correlationId || event.eventId,
+        },
       });
 
-      this.logger.log(`Successfully published <%= classify(moduleName) %>CreatedEvent for ID: ${event.id}`);
+      this.logger.log(`Successfully published <%= classify(moduleName) %>CreatedEvent for ID: ${event.data.id}`);
     } catch (error) {
       this.logger.error(
-        `Failed to publish <%= classify(moduleName) %>CreatedEvent for ID ${event.id}: ${error.message}`,
+        `Failed to publish <%= classify(moduleName) %>CreatedEvent for ID ${event.data.id}: ${error.message}`,
         error.stack
       );
-      // TODO: Implement retry logic or dead letter queue
       throw error;
     }
   }
 
-  /**
-   * Publish <%= classify(moduleName) %> Updated Event
-   *
-   * @param event - The event payload containing updated entity data
-   */
-  async publish<%= classify(moduleName) %>UpdatedEvent(event: {
-    id: string;
-    changes: any;
-    occurredAt: Date;
-    [key: string]: any;
-  }): Promise<void> {
+  async publishUpdated(event: <%= classify(moduleName) %>UpdatedEvent): Promise<void> {
     const topic = `${this.topicPrefix}.updated`;
     
     try {
       this.logger.log(`Publishing <%= classify(moduleName) %>UpdatedEvent to topic: ${topic}`);
 
-      await this.kafkaService.publish({
+      await this.kafkaService.publishMessage({
         topic,
-        messages: [
-          {
-            key: event.id,
-            value: JSON.stringify({
-              eventType: '<%= classify(moduleName) %>Updated',
-              eventVersion: '1.0',
-              occurredAt: event.occurredAt.toISOString(),
-              payload: {
-                id: event.id,
-                changes: event.changes,
-                // TODO: Add additional event payload fields
-              },
-            }),
-            headers: {
-              'event-type': '<%= classify(moduleName) %>Updated',
-              'event-version': '1.0',
-              'correlation-id': event.id,
-            },
-          },
-        ],
+        key: event.data.id,
+        value: JSON.stringify(event),
+        headers: {
+          'event-type': event.eventType,
+          'event-version': event.version,
+          'correlation-id': event.correlationId || event.eventId,
+        },
       });
 
-      this.logger.log(`Successfully published <%= classify(moduleName) %>UpdatedEvent for ID: ${event.id}`);
+      this.logger.log(`Successfully published <%= classify(moduleName) %>UpdatedEvent for ID: ${event.data.id}`);
     } catch (error) {
       this.logger.error(
-        `Failed to publish <%= classify(moduleName) %>UpdatedEvent for ID ${event.id}: ${error.message}`,
+        `Failed to publish <%= classify(moduleName) %>UpdatedEvent for ID ${event.data.id}: ${error.message}`,
         error.stack
       );
       throw error;
     }
   }
 
-  /**
-   * Publish <%= classify(moduleName) %> Deleted Event
-   *
-   * @param event - The event payload containing deleted entity data
-   */
-  async publish<%= classify(moduleName) %>DeletedEvent(event: {
-    id: string;
-    deletionType: 'soft' | 'hard';
-    occurredAt: Date;
-    [key: string]: any;
-  }): Promise<void> {
+  async publishDeleted(event: <%= classify(moduleName) %>DeletedEvent): Promise<void> {
     const topic = `${this.topicPrefix}.deleted`;
     
     try {
       this.logger.log(`Publishing <%= classify(moduleName) %>DeletedEvent to topic: ${topic}`);
 
-      await this.kafkaService.publish({
+      await this.kafkaService.publishMessage({
         topic,
-        messages: [
-          {
-            key: event.id,
-            value: JSON.stringify({
-              eventType: '<%= classify(moduleName) %>Deleted',
-              eventVersion: '1.0',
-              occurredAt: event.occurredAt.toISOString(),
-              payload: {
-                id: event.id,
-                deletionType: event.deletionType,
-                // TODO: Add additional event payload fields
-              },
-            }),
-            headers: {
-              'event-type': '<%= classify(moduleName) %>Deleted',
-              'event-version': '1.0',
-              'correlation-id': event.id,
-            },
-          },
-        ],
+        key: event.data.id,
+        value: JSON.stringify(event),
+        headers: {
+          'event-type': event.eventType,
+          'event-version': event.version,
+          'correlation-id': event.correlationId || event.eventId,
+        },
       });
 
-      this.logger.log(`Successfully published <%= classify(moduleName) %>DeletedEvent for ID: ${event.id}`);
+      this.logger.log(`Successfully published <%= classify(moduleName) %>DeletedEvent for ID: ${event.data.id}`);
     } catch (error) {
       this.logger.error(
-        `Failed to publish <%= classify(moduleName) %>DeletedEvent for ID ${event.id}: ${error.message}`,
+        `Failed to publish <%= classify(moduleName) %>DeletedEvent for ID ${event.data.id}: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
+  }
+
+  async publishStatusChanged(event: <%= classify(moduleName) %>StatusChangedEvent): Promise<void> {
+    const topic = `${this.topicPrefix}.status-changed`;
+    
+    try {
+      this.logger.log(`Publishing <%= classify(moduleName) %>StatusChangedEvent to topic: ${topic}`);
+
+      await this.kafkaService.publishMessage({
+        topic,
+        key: event.data.id,
+        value: JSON.stringify(event),
+        headers: {
+          'event-type': event.eventType,
+          'event-version': event.version,
+          'correlation-id': event.correlationId || event.eventId,
+        },
+      });
+
+      this.logger.log(`Successfully published <%= classify(moduleName) %>StatusChangedEvent for ID: ${event.data.id}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish <%= classify(moduleName) %>StatusChangedEvent for ID ${event.data.id}: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
+  }
+
+  async publishCustomEvent(event: <%= classify(moduleName) %>CustomEvent): Promise<void> {
+    const topic = `${this.topicPrefix}.custom`;
+    
+    try {
+      this.logger.log(`Publishing <%= classify(moduleName) %>CustomEvent to topic: ${topic}`);
+
+      await this.kafkaService.publishMessage({
+        topic,
+        key: event.data.id || event.eventId,
+        value: JSON.stringify(event),
+        headers: {
+          'event-type': event.eventType,
+          'event-version': event.version,
+          'correlation-id': event.correlationId || event.eventId,
+        },
+      });
+
+      this.logger.log(`Successfully published <%= classify(moduleName) %>CustomEvent`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish <%= classify(moduleName) %>CustomEvent: ${error.message}`,
         error.stack
       );
       throw error;
