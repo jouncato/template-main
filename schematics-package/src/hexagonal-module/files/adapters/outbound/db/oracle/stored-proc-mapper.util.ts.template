@@ -57,7 +57,7 @@ export class OracleStoredProcMapper {
    * @param entity - The <%= classify(moduleName) %> entity to convert
    * @returns Oracle bind parameters object for stored procedure calls
    */
-  static toUpdateParamsFromEntity(entity: <%= classify(moduleName) %>Entity): oracledb.BindParameters {
+  static toUpdateParams(entity: <%= classify(moduleName) %>Entity): oracledb.BindParameters {
     return {
       p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.id },
       p_name: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: entity.name },

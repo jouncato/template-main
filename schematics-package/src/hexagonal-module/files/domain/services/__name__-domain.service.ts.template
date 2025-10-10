@@ -223,16 +223,6 @@ export class <%= classify(moduleName) %>DomainService {
       throw new Error('Cannot delete an inactive entity');
     }
   }
-
-  /**
-   * Helper method: Validate name format
-   * Private because it's an implementation detail
-   */
-  private isValidName(name: string): boolean {
-    // Business rule: Only alphanumeric, spaces, and hyphens
-    const validNameRegex = /^[a-zA-Z0-9\s-]+$/;
-    return validNameRegex.test(name);
-  }
 }
 
 /**

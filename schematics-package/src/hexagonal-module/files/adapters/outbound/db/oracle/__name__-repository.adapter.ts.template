@@ -560,4 +560,51 @@ export class <%= classify(moduleName) %>RepositoryAdapter implements I<%= classi
       throw new Error(`Failed to delete multiple <%= moduleName %> entities: ${(error as Error).message}`);
     }
   }
+
+  /**
+   * Hard delete a <%= classify(moduleName) %> entity (permanently remove from database)
+   *
+   * Calls stored procedure: PRC_<%= constantCase(moduleName) %>_HARD_DELETE
+   *
+   * Oracle Specifics:
+   * - Uses Oracle DELETE statement to permanently remove the record
+   * - No soft delete functionality (isActive flag is ignored)
+   * - Cannot be undone - use with extreme caution
+   * - Bind variable: p_id (VARCHAR2)
+   * - OUT parameter: p_affected_rows (NUMBER)
+   *
+   * @param id - The unique identifier of the entity to hard delete
+   * @returns Promise resolving to true if deleted, false if not found
+   */
+  async hardDelete(id: string): Promise<boolean> {
+    try {
+      this.logger.log(`Hard deleting <%= moduleName %> with id: ${id}`);
+
+      // Bind parameters for stored procedure
+      const binds: oracledb.BindParameters = {
+        p_id: { dir: oracledb.BIND_IN, type: oracledb.STRING, val: id },
+        p_affected_rows: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      };
+
+      // Execute stored procedure
+      const result = await this.oracleService.callProcedure<any>(
+        'PRC_<%= constantCase(moduleName) %>_HARD_DELETE',
+        binds,
+      );
+
+      // Check affected rows
+      const affectedRows = result.outBinds?.p_affected_rows as number;
+
+      if (affectedRows > 0) {
+        this.logger.log(`<%= classify(moduleName) %> hard deleted successfully: ${id}`);
+        return true;
+      } else {
+        this.logger.log(`<%= classify(moduleName) %> with id ${id} not found for hard deletion`);
+        return false;
+      }
+    } catch (error) {
+      this.logger.error(`Error hard deleting <%= moduleName %> with id ${id}:`, error);
+      throw new Error(`Failed to hard delete <%= moduleName %>: ${(error as Error).message}`);
+    }
+  }
 }
