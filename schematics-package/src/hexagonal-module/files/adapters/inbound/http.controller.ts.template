@@ -17,8 +17,8 @@ import {
   ApiParam,
 <% if (auth && auth !== 'none') { %>  ApiBearerAuth,<% } %>
 } from '@nestjs/swagger';
-<% if (auth === 'jwt') { %>import { JwtAuthGuard } from '@share/guards/jwt-auth.guard';<% } %>
-<% if (auth === 'oauth2') { %>import { OAuth2Guard } from '@share/guards/oauth2.guard';<% } %>
+<% if (auth === 'jwt') { %>import { <%= classify(moduleName) %>JwtAuthGuard } from '../auth/jwt-auth.guard';<% } %>
+<% if (auth === 'oauth2') { %>import { <%= classify(moduleName) %>OAuth2Guard } from '../auth/oauth2-auth.guard';<% } %>
 
 // Use Cases
 import { Create<%= classify(moduleName) %>UseCase } from '../../application/usecases/create-<%= dasherize(moduleName) %>.usecase';
@@ -57,8 +57,8 @@ import { <%= classify(moduleName) %>ResponseDto } from '../../application/dtos/<
 @ApiTags('<%= dasherize(moduleName) %>')
 @Controller('<%= dasherize(moduleName) %>')
 <% if (auth && auth !== 'none') { %>@ApiBearerAuth()
-<% if (auth === 'jwt') { %>@UseGuards(JwtAuthGuard)<% } %>
-<% if (auth === 'oauth2') { %>@UseGuards(OAuth2Guard)<% } %>
+<% if (auth === 'jwt') { %>@UseGuards(<%= classify(moduleName) %>JwtAuthGuard)<% } %>
+<% if (auth === 'oauth2') { %>@UseGuards(<%= classify(moduleName) %>OAuth2Guard)<% } %>
 <% } %>export class <%= classify(moduleName) %>Controller {
   constructor(
     private readonly create<%= classify(moduleName) %>UseCase: Create<%= classify(moduleName) %>UseCase,
