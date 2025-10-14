@@ -122,6 +122,14 @@ export abstract class I<%= classify(moduleName) %>Repository {
    * @returns Promise resolving to the number of deleted entities
    */
   abstract deleteMany(ids: string[]): Promise<number>;
+
+  /**
+   * Hard delete an entity (permanently remove from database)
+   *
+   * @param id - The unique identifier of the entity to hard delete
+   * @returns Promise resolving to true if deleted, false if not found
+   */
+  abstract hardDelete(id: string): Promise<boolean>;
 }
 
 /**

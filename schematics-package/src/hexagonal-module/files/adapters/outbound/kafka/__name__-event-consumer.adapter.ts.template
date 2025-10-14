@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { KafkaService } from '@share/infrastructure/kafka/kafka.service';
+import { KafkaService } from '../../../../share/infrastructure/kafka/kafka.service';
 
 /**
  * <%= classify(moduleName) %> Event Consumer Adapter (Inbound Kafka Consumer)

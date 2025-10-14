@@ -176,6 +176,53 @@ export class <%= classify(moduleName) %>DomainService {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }
+
+  /**
+   * Validate entity data for creation
+   */
+  async validateForCreation(dto: any): Promise<void> {
+    if (!dto.name || dto.name.trim().length === 0) {
+      throw new Error('Name is required for creation');
+    }
+
+    if (!this.isValidName(dto.name)) {
+      throw new Error('Name must not contain special characters except spaces and hyphens');
+    }
+
+    if (dto.description && dto.description.length > 500) {
+      throw new Error('Description must not exceed 500 characters');
+    }
+  }
+
+  /**
+   * Validate entity data for update
+   */
+  async validateForUpdate(entity: <%= classify(moduleName) %>Entity, dto: any): Promise<void> {
+    if (dto.name && !this.isValidName(dto.name)) {
+      throw new Error('Name must not contain special characters except spaces and hyphens');
+    }
+
+    if (dto.description && dto.description.length > 500) {
+      throw new Error('Description must not exceed 500 characters');
+    }
+
+    if (!entity.canBeDeleted() && dto.isActive === false) {
+      throw new Error('Cannot deactivate entity that cannot be deleted');
+    }
+  }
+
+  /**
+   * Validate entity for deletion
+   */
+  async validateForDeletion(entity: <%= classify(moduleName) %>Entity): Promise<void> {
+    if (!entity.canBeDeleted()) {
+      throw new Error('Entity cannot be deleted');
+    }
+
+    if (!entity.isActive()) {
+      throw new Error('Cannot delete an inactive entity');
+    }
+  }
 }
 
 /**
