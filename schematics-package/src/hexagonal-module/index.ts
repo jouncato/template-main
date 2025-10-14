@@ -187,10 +187,10 @@ function normalizeOptions(options: HexagonalModuleOptions): NormalizedOptions {
   // Normalize paths and names
   const moduleName = strings.dasherize(normalizedOptions.name);
   const moduleClassName = strings.classify(normalizedOptions.name);
-  // Normalize base path first and compose target path using join to respect --path
-  const basePath = normalizedOptions.path
-    ? normalize(normalizedOptions.path)
-    : normalize('src/app');
+  // Normalize base path first: convert backslashes to forward slashes for cross-platform compatibility
+  const rawPath = normalizedOptions.path || 'src/app';
+  const normalizedPath = rawPath.replace(/\\/g, '/');
+  const basePath = normalize(normalizedPath);
   const modulePath = normalizedOptions.flat
     ? basePath
     : join(basePath, moduleName);

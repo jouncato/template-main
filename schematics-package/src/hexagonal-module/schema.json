@@ -48,8 +48,9 @@
     },
     "path": {
       "type": "string",
-      "description": "The path to create the module",
-      "default": "src/app"
+      "description": "The path to create the module (use forward slashes, e.g., src/app or my-project/src/app)",
+      "default": "src/app",
+      "x-prompt": "What is the path where you want to create the module? (e.g., src/app)"
     },
     "crud-mode": {
       "type": "string",
